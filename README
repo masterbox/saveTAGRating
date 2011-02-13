@@ -4,4 +4,9 @@ right click on mp3 files > save ratings and counts to file
 - To restore rhythmbox database ratings and playcounts from files tag do :
 right click on mp3 files > restore ratings and counts from file
 
+Dépot GIT :
+- mettre un fichier .gitignore dans le dossier local du dépôt et mettre dedans :
+*.pyc
+.*
+pour ignorer les fichiers cachés et les fichiers .pyc (généré localement par python)
 
