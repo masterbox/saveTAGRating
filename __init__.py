@@ -19,36 +19,13 @@
 #
 
 
-
-
-import rhythmdb, rb
-import gobject, gtk
-from subprocess import Popen
+from mutagen.id3 import ID3, POPM, PCNT
 from os import path
 from urllib import url2pathname
+import gtk
 import pynotify
-
-ui_str = """
-<ui>
-  <popup name="BrowserSourceViewPopup">
-    <placeholder name="PluginPlaceholder">
-      <menuitem name="saveTAGRatingPopup" action="saveTAGRating"/>
-    </placeholder>
-  </popup>
-
-  <popup name="PlaylistViewPopup">
-    <placeholder name="PluginPlaceholder">
-      <menuitem name="saveTAGRatingPopup" action="saveTAGRating"/>
-    </placeholder>
-  </popup>
-
-  <popup name="QueuePlaylistViewPopup">
-    <placeholder name="PluginPlaceholder">
-      <menuitem name="saveTAGRatingPopup" action="saveTAGRating"/>
-    </placeholder>
-  </popup>
-</ui>
-"""
+import rb
+import rhythmdb
 
 class saveTAGRating(rb.Plugin):
 
@@ -56,141 +33,224 @@ class saveTAGRating(rb.Plugin):
         rb.Plugin.__init__(self)
             
     def activate(self, shell):
-        self.action = gtk.Action('saveTAGRating', _('Synchronize rating with file'),
-                     _('Synchronize rating with file'),
-                     'saveTAGRating')
-        self.activate_id = self.action.connect('activate', self.tidy_Rating, shell)
+        # Create two gtkAction
+        # One to save to file 
+        self.action = gtk.Action('savetofile', #name 
+                                 _('Save ratings and playcounts to files'), #label
+                                 _('Save ratings and playcounts to files'), #tooltip
+                                 'saveTAGRating' # icon
+                                 )
+        # One to restore from file
+        self.action2 = gtk.Action('restorefromfile', #name 
+                                 _('Restore ratings and playcounts from files'), #label
+                                 _('Restore ratings and playcounts from files'), #tooltip
+                                 'saveTAGRating' # icon
+                                 )
         
+        # TODO: rajouter une action plus évoluée pour la synchro bidirectionnelle ?
+        # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
+        
+        # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
+        self.pluginrootpath=path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
+        
+        # Define callback methods on these actions
+        self.action.connect('activate', self.executedoActionOnSelected,self.saveRhythmDBToFile, shell)       
+        self.action2.connect('activate', self.executedoActionOnSelected,self.restoreRhythmDBFromFile, shell)
+        
+        # Un autre menu pour une autre action (qui s'appliquerait sur les éléments sélectionnés aurait la forme suivante :
+        #self.actionX.connect('activate', self.executedoActionOnSelected,self.une_methode_a_definir_dans_la_classe, shell)
+        
+        
+        # Create a group of actions, add the previously defined actions to it, and insert it to the ui manager
         self.action_group = gtk.ActionGroup('saveTAGRatingPluginActions')
         self.action_group.add_action(self.action)
+        self.action_group.add_action(self.action2)
+        self.uim = shell.get_ui_manager ()
+        self.uim.insert_action_group(self.action_group, 0)
         
-        uim = shell.get_ui_manager ()
-        uim.insert_action_group(self.action_group, 0)
-        self.ui_id = uim.add_ui_from_string(ui_str)
-        uim.ensure_update()
-    def notificame(self, num_saved, num_already_done):
-        pynotify.init('notify_user')
-        if num_saved + num_already_done != 0 :
-            imageURI = path.expanduser("~/.gnome2/rhythmbox/plugins/saveTAGRating_en/Cover.png")
-            n = pynotify.Notification("%s synchronized" % (num_saved), "%s failed " % (num_already_done), imageURI)
-            n.show()
-        else:
-            imageURI = path.expanduser("~/.gnome2/rhythmbox/plugins/saveTAGRating_en/NoCover.png")
-            n = pynotify.Notification("¡Error! No Rating found", "Please add some Rating to the library", imageURI)
-            n.show()
-            
+        # Load the ui structure from the xml file
+        self.ui_id = self.uim.add_ui_from_file(self.pluginroothpath+"saveratings_ui.xml")
+        # Refresh user interface
+        self.uim.ensure_update()
         
-    def save_Rating_inside(self, pathSong, ratingValue, count):
-        from mutagen.mp3 import MP3
-        from mutagen.id3 import ID3, TXXX, POPM
-        audio = ID3(pathSong)
-#        if isinstance(audio, MP3):
-        if (pathSong[-4:].lower() == ".mp3"):  #for safety reutilization of the code
-            audio.delall('POPM')
-            audio.add(POPM(email=u"Banshee", rating=int(51 * ratingValue), count=count))
-            print "saving"
-            print int(51 * ratingValue)
-#            rating = TXXX(encoding=3, desc=u"RATING", text=[u"%s" % ratingValue])
-#            audio.add(rating)
-
-            audio.save()
-#        else:
-#            audio["Rating"] = str(ratingValue)
-#
-            #mySong= MP3(pathSong)
-            #hasRating = mySong.__str__()
-            return True
-                      
-    def get_Rating(self, pathSong):
-        from mutagen.mp3 import MP3
-        from mutagen.id3 import ID3, TXXX, POPM
-        if (pathSong[-4:].lower() == ".mp3"):  #for safety reutilization of the code
-            #mySong= ID3(pathSong)
-            #hasRating = mySong.__str__()
-        #print hasRating
-        #print "teeeeest"
-            audio = ID3(pathSong)
-            if len(audio.getall('POPM')) != 0:
-                rating = audio.getall('POPM')[0].rating
-                print "real rating"
-                print rating
-		if (rating > 8 and rating < 50):
-			print rating
-			return 1;
-		if (rating > 49 and rating < 114):
-			return 2;
-		if (rating > 113 and rating < 168):
-			return 3;
-		if (rating > 167 and rating < 219):
-			return 4;
-		if (rating > 218):
-			return 5;
-		return 0;		
-            else:
-                return 0
- 
-    def get_Count(self, pathSong):
-        from mutagen.mp3 import MP3
-        from mutagen.id3 import ID3, TXXX, POPM
-        if (pathSong[-4:].lower() == ".mp3"):  #for safety reutilization of the code
-            #mySong= ID3(pathSong)
-            #hasRating = mySong.__str__()
-        #print hasRating
-        #print "teeeeest"
-            audio = ID3(pathSong)
-            if len(audio.getall('POPM')) != 0:
-		if hasattr(audio.getall('POPM')[0], 'count'):
-	                count = audio.getall('POPM')[0].count or 0
-	                return count
-		else:
-			return 0
-#            if len(audio.getall(u'TXXX:RATING')) != 0:
-#                rating = audio[u'TXXX:RATING'].text[0].__str__()
-#                return int(rating[:1])
-            else:
-                return 0
-      
-    def tidy_Rating(self, action, shell):
-        source = shell.get_property("selected_source")
-        print source
-        entry = rb.Source.get_entry_view(source)
-        selected = entry.get_selected_entries()
-        num_saved = 0
-        num_already_done = 0
-        if selected != []:
-            errors = False
-            for element in selected:
-                db = shell.get_property("db")
-        		#rating = db.get ("rating", -1.0)
-                rating = shell.props.db.entry_get(element, rhythmdb.PROP_RATING)
-                count = shell.props.db.entry_get(element, rhythmdb.PROP_PLAY_COUNT)
-                uri = element.get_playback_uri()
-                dirpath = uri.rpartition('/')[0]
-                uri_normalizado = url2pathname(dirpath.replace("file://", ""))
-                path_normalizado = url2pathname(uri.replace("file://", ""))
-                print "BEFORE DECISION"
-                if rating == 0:
-                            rating = self.get_Rating(path_normalizado)
-                            print "rating lu"
-                            print rating
-                            count = self.get_Count(path_normalizado)
-                            shell.props.db.set(element, rhythmdb.PROP_RATING, rating)
-                            shell.props.db.set(element, rhythmdb.PROP_PLAY_COUNT, count)
-                            shell.props.db.commit()
-                            num_saved = num_saved + 1
-                else:
-                            if self.save_Rating_inside(path_normalizado, rating, count):
-                                num_saved = num_saved + 1
-                            else:
-                                num_already_done = num_already_done + 1
-        if errors == False :
-                self.notificame(num_saved, num_already_done)
-        elif num_saved + num_already_done > 0:
-                self.notificame(num_saved, num_already_done)
+        print("Plugin activated")
+        
     
+    def check_recognized_format(self, pathSong):
+        """ Return true if the file (pathSong) is a recognized audio format (mp3,ogg, flac,etc...)"""
+        ext4=pathSong[-5:].lower()
+        ext3=ext4[1:].lower()
+        
+        return ext3 == ".mp3" #or ext3 == ".ogg" or ext3==".oga" or ext4==".flac" 
+            
+
+    def save_db_to_id3v2(self,pathSong,dbrating,dbcount):
+        """ Save rating and playcount from Rhythmbox db to standard ID3v2 tags
+        See http://www.id3.org/id3v2.4.0-frames section 4.16 and 4.17
+        !!! Only for MP3 !!!
+        POPM stand for Popularimeter
+        PCNT stand for Play Counter 
+        """
+        audio = ID3(pathSong)
+        if dbrating>0:
+            audio.delall('POPM')
+            audio.add(POPM(email=u'Banshee',rating=int(51*dbrating)))
+            # ajouter une compatibilité avec d'autres lecteurs qui stockerait différemment
+            # le rating (c'est à dire autrement que entre 1 et 255 ou que entre 0 et 5)
+            #audio.add(POPM(email=u'Other Player',rating=?????????)))
+        if dbcount>0:
+            audio.delall('PCNT') 
+            audio.add(PCNT(count=int(dbcount)))
+        audio.save()
+            
+            
+            
+    def save_db_to_xiphcomment(self,pathSong,dbrating,dbcount):
+        """" Save rating and playcount from Rhythmbox db to xiph comment (vorbis)
+        for ogg vorbis and flac """
+        #TODO: prendre en charge le Ogg et le FLAC
+        # il semblerait qu'il n'y ait pas de standard pour le Ogg et le FLAC, comme pour ID3
+        # à creuser
+        pass
+    
+    
+    
+    def get_ID3v2_Rating(self, pathSong):
+        """ Function to get the rating from a file (pathSong) and to return 
+        a Rhythmbox compatible ratings (value from 0 to 5)"""
+        # By default, 0 means an unknown rating 
+        rhytm_rating = 0
+        audio = ID3(pathSong)
+        popmlist = audio.getall('POPM')
+        if popmlist != []:
+            rating = popmlist[0].rating
+            if (rating > 8 and rating < 52):
+                rhytm_rating = 1
+            if (rating > 51 and rating < 114):
+                rhytm_rating = 2
+            if (rating > 113 and rating < 168):
+                rhytm_rating = 3
+            if (rating > 167 and rating < 219):
+                rhytm_rating = 4
+            if (rating > 218):
+                rhytm_rating = 5
+                
+        return rhytm_rating
+
+    
+    def get_ID3v2_Count(self, pathSong):
+        """ Function to get the playcount from a file (pathSong) """
+        # By default, 0 means the file has never been played 
+        rhytm_playcount = 0
+        audio = ID3(pathSong)
+        pcntlist = audio.getall('PCNT')
+        if pcntlist != []:
+            rhytm_playcount = pcntlist[0].count    
+        return rhytm_playcount
+
+      
+    def executedoActionOnSelected(self, action, doaction, shell):
+        """ Function to apply doaction on each element that has been selected """        
+        # Get a rb.Source instance of the selected page
+        source = shell.get_property("selected_page")
+        # Get an EntryView for the selected source (the track list)
+        entryview = source.get_entry_view()
+        # Get the list of selected entries from the track list
+        selected = entryview.get_selected_entries()
+        
+        global num_saved,num_failed,num_restored
+        num_saved,num_failed,num_restored=0,0,0
+        
+        
+        # Get the  RhythmDBTree from the shell to do some 
+        # high level queries and updates
+        db = shell.props.db
+        # For each element of the selection...
+        for element in selected:
+            uri = element.get_playback_uri()
+            dirpath = uri.rpartition('/')[0]
+            uri_normalizado = url2pathname(dirpath.replace("file://", ""))
+            path_normalizado = url2pathname(uri.replace("file://", ""))
+            # ...Execute the doaction function
+            doaction(db,element,path_normalizado)
+        
+        
+        
+        print(num_saved,num_restored,num_failed)
+        pynotify.init('notify_user')
+        pynotify.Notification(_("Status"), _("%s saved \n %s restored \n %s failed "%(num_saved,num_restored,num_failed))).show()
+      
+      
+      
+      
+    def saveRhythmDBToFile(self, db,element,path_normalizado):
+        """ a doaction function """
+        """ Save ratings and playcount from Rhytmbox Database to file """
+        # Get the dbrating value (float) of the RhythmboxDB element 
+        dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
+        # Get the dbcount value (integer) of the RhythmboxDB element
+        dbcount = db.entry_get(element, rhythmdb.PROP_PLAY_COUNT)
+       
+        global num_saved
+        global num_failed
+        print("dbrating",dbrating)
+        print("dbcount",dbcount)        
+        
+        if self.check_recognized_format(path_normalizado):
+            
+            #TODO: utiliser l'introspection pour faire selon le format (mp3, ogg, flac, etc...) une sauvegarde spécifique
+            # c'est à dire appeler save_db_to_xxx(...) avec xxx à remplacer selon le format audio
+            
+            self.save_db_to_id3v2(path_normalizado, dbrating, dbcount)
+            num_saved+=1
+            print("save db to file done")        
+
+            ####### Check if tag has been saved (debug) ############
+            #filerating = self.get_ID3v2_Rating(path_normalizado)
+            #print("filerating",filerating)
+            #filecount = self.get_ID3v2_Count(path_normalizado)
+            #print("filecount",filecount)
+            ############################################
+        else:
+            #TODO: utiliser les exceptions pour gérer tous les cas d'erreurs (erreur d'entrée sortie, cause inconnue, etc...)
+            # pour rendre transactionnel le code précédent, ainsi la levée d'une exception entraînera l'incrémentation de num_failed
+            # même si la cause n'est pas juste un format non reconnu
+            num_failed+=1
+            print("unrecognized format")
+
+
+
+    def restoreRhythmDBFromFile(self, db, element,path_normalizado):
+        """ a doaction function """
+        """ Restore ratings and playcounts from file to Rhythmbox db"""
+        global num_restored
+        global num_failed
+        if self.check_recognized_format(path_normalizado):
+            #TODO: utiliser l'introspection pour faire selon le format (mp3, ogg, flac, etc...) une restauration spécifique
+            # c'est à dire appeler save_db_to_xxx(...) avec xxx à remplacer selon le format audio
+            filerating = self.get_ID3v2_Rating(path_normalizado)
+            print("filerating",filerating)
+            db.set(element, rhythmdb.PROP_RATING, filerating)
+            filecount = self.get_ID3v2_Count(path_normalizado)
+            db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
+            db.commit() 
+            num_restored+=1
+            print("filecount",filecount)
+        else:
+            #TODO: utiliser les exceptions pour gérer tous les cas d'erreurs (erreur d'entrée sortie, cause inconnue, etc...)
+            # pour rendre transactionnel le code précédent, ainsi la levée d'une exception entraînera l'incrémentation de num_failed
+            # même si la cause n'est pas juste un format non reconnu
+            num_failed+=1       
+            print("unrecognized format")
+
+
     def deactivate(self, shell):
-        uim = shell.get_ui_manager()
-        uim.remove_ui (self.ui_id)
-        uim.remove_action_group (self.action_group)
+        """ Dereference any fields that has been initialized in activate"""
+        self.uim.remove_ui (self.ui_id)
+        del self.ui_id
+        self.uim.remove_action_group (self.action_group)
+        del self.uim
         del self.action_group
         del self.action
+        del self.action2
+        del self.pluginrootpath
