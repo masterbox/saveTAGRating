@@ -69,7 +69,7 @@ class saveTAGRating(rb.Plugin):
         self.uim.insert_action_group(self.action_group, 0)
         
         # Load the ui structure from the xml file
-        self.ui_id = self.uim.add_ui_from_file(self.pluginroothpath+"saveratings_ui.xml")
+        self.ui_id = self.uim.add_ui_from_file(self.pluginrootpath+"saveratings_ui.xml")
         # Refresh user interface
         self.uim.ensure_update()
         
