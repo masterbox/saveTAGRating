@@ -1,9 +1,0 @@
-[RB Plugin]
-Loader=python
-Module=saveTAGRating
-IAge=1
-Name=saveTAGRating
-Description=Save the rating inside the metadata (Only support for MP3) Needs python-mutagen and python-notify
-Authors=Matthieu Bosc  
-Copyright=2010 Masterbox
-Website=http://utopievirtuelle.wordpress.com
