@@ -1,0 +1,22 @@
+<ui>
+  <popup name="BrowserSourceViewPopup">
+    <placeholder name="PluginPlaceholder">
+      <menuitem name="savetofilepopup" action="savetofile"/>
+      <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+    </placeholder>
+  </popup>
+
+  <popup name="PlaylistViewPopup">
+    <placeholder name="PluginPlaceholder">
+      <menuitem name="savetofilepopup" action="savetofile"/>
+      <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+    </placeholder>
+  </popup>
+
+  <popup name="QueuePlaylistViewPopup">
+    <placeholder name="PluginPlaceholder">
+      <menuitem name="savetofilepopup" action="savetofile"/>
+      <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+    </placeholder>
+  </popup>
+</ui>
