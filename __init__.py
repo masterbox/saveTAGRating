@@ -27,6 +27,7 @@ import gtk
 import pynotify
 import rb
 import rhythmdb
+import gobject
 
 
 class saveTAGRating(rb.Plugin):
@@ -99,27 +100,76 @@ class saveTAGRating(rb.Plugin):
         # high level queries and updates
         db = shell.props.db
         
-        #TODO : put this loop in the GUI threads ?
         
+        
+        ########### TO REMOVE ############################
+        # Code before using gtk threads
         # For each element of the selection...
-        for element in selected:
+        #        for element in selected:
+        #            uri = element.get_playback_uri()
+        #            dirpath = uri.rpartition('/')[0]
+        #            uri_normalizado = url2pathname(dirpath.replace("file://", ""))
+        #            path_normalizado = url2pathname(uri.replace("file://", ""))
+        #            # ...Execute the doaction function
+        #            doaction(db, element, path_normalizado)
+        #####################################################
+        
+        # Global variable to store the index of the current selected element
+        # iel is set to 0 and will be increased during the loop of the idle callback 
+        global iel
+        iel = 0
+        
+        gobject.idle_add(self.idle_cb_loop_on_selected, # name of the callback  
+                        selected, # additionnal parameters
+                        db,  #  --
+                        doaction, # --
+                        # named parameter to set an idle priority (background)
+                        priority=gobject.PRIORITY_DEFAULT_IDLE) 
+        
+        
+        
+ 
+    
+    def idle_cb_loop_on_selected(self, selected, db, doaction):
+        """ Use chunked idle callbacks to perform IO operation in an asynchronous way
+        See http://live.gnome.org/RhythmboxPlugins/WritingGuide#Using_idle_callbacks_for_repeated_tasks
+        """
+        global num_saved, num_failed, num_restored, num_already_done
+        global iel
+        
+        gtk.gdk.threads_enter()
+        finished = False
+        
+        # Count is used for chunked idle callbacks (to limit overhead of calling threads_enter())
+        # maximum value to be properly defined (if N=size of the collection > N/2, N/3, N/4, N ????)
+        count = 0
+        
+        
+        
+        while iel < len(selected) and count < 200:
+            element = selected[iel]
             uri = element.get_playback_uri()
             dirpath = uri.rpartition('/')[0]
             uri_normalizado = url2pathname(dirpath.replace("file://", ""))
             path_normalizado = url2pathname(uri.replace("file://", ""))
             # ...Execute the doaction function
             doaction(db, element, path_normalizado)
+            count += 1
+            iel += 1
+            
+        if iel < len(selected):
+            gtk.gdk.threads_leave()
+            return True
         
-        
-        
+        gtk.gdk.threads_leave()
         # Notification at the end of process
         pynotify.init('notify_user')
         pynotify.Notification(_("Status"), _("%s saved \n %s restored \n %s failed \n %s already done" 
                                              % (num_saved, num_restored, num_failed, num_already_done))).show()
-      
-      
+        return False
+        
     
-
+    
     def _convert_ID3v2_rating_to_rhythmbdb_rating(self, rating):
         """ Function to convert ID3v2 POPM standard rating (from 0 to 255) to rhythmbox
         rating (from 0 to 5) """
@@ -182,8 +232,6 @@ class saveTAGRating(rb.Plugin):
         needsave = False
         
         
-        
-        
         if dbrating > 0:
             popmlist = audio.getall('POPM')
             if popmlist == []:
@@ -197,6 +245,7 @@ class saveTAGRating(rb.Plugin):
                     audio.delall('POPM')
                     audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
                     needsave = True
+
             
         if dbcount > 0:
             pcntlist = audio.getall('PCNT')
@@ -209,8 +258,8 @@ class saveTAGRating(rb.Plugin):
                 if pcntlist[0].count != dbcount:
                     audio.delall('PCNT')
                     audio.add(PCNT(count=int(dbcount)))
-                    needsave = True 
-            
+                    needsave = True
+
         if needsave:
             # save to file only if needed
             audio.save()
@@ -269,6 +318,7 @@ class saveTAGRating(rb.Plugin):
         else:
             num_failed += 1
             print("unrecognized format")
+        
 
 
 
@@ -330,6 +380,8 @@ class saveTAGRating(rb.Plugin):
             # Use need commit to commit only if necessary (if the tags read from the file are different)            
             needcommit = False
             
+            
+            
             if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
                 db.set(element, rhythmdb.PROP_RATING, filerating)
                 needcommit = True
@@ -337,6 +389,7 @@ class saveTAGRating(rb.Plugin):
             if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
                 db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
                 needcommit = True
+            
             
             if needcommit:
                 db.commit()
