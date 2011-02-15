@@ -19,10 +19,9 @@ to ignore hidden files, backup files and .pyc files
 
 Todo :
 - support xiph comments to store ratings/playcounts inside ogg vorbis and flac files
-- new entry to synchronize between rhythmbox database and files (in smart way, for example always set max(filecount,dbcount) for the playcount tag)
+- new entry to synchronize between rhythmbox database and files (in a smart way, for example always set max(filecount,dbcount) for the playcount tag)
 - internationalization
 - menu icons
-- use gui threads to avoid ui locking 
 
 
 Idea :
