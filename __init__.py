@@ -28,6 +28,8 @@ import pynotify
 import rb
 import rhythmdb
 import gobject
+from time import time
+
 
 
 class saveTAGRating(rb.Plugin):
@@ -95,7 +97,7 @@ class saveTAGRating(rb.Plugin):
         global num_saved, num_failed, num_restored, num_already_done
         num_saved, num_failed, num_restored, num_already_done = 0, 0, 0, 0
         
-        
+                
         # Get the  RhythmDBTree from the shell to do some 
         # high level queries and updates
         db = shell.props.db
@@ -119,6 +121,10 @@ class saveTAGRating(rb.Plugin):
         global iel
         iel = 0
         
+        # Store the start time before we start a long computation
+        global t0
+        t0=time()
+
         gobject.idle_add(self.idle_cb_loop_on_selected, # name of the callback  
                         selected, # additionnal parameters
                         db,  #  --
@@ -136,6 +142,7 @@ class saveTAGRating(rb.Plugin):
         """
         global num_saved, num_failed, num_restored, num_already_done
         global iel
+        global t0
         
         gtk.gdk.threads_enter()
         finished = False
@@ -146,7 +153,7 @@ class saveTAGRating(rb.Plugin):
         
         
         
-        while iel < len(selected) and count < 200:
+        while iel < len(selected) and count < 10:
             element = selected[iel]
             uri = element.get_playback_uri()
             dirpath = uri.rpartition('/')[0]
@@ -160,12 +167,25 @@ class saveTAGRating(rb.Plugin):
         if iel < len(selected):
             gtk.gdk.threads_leave()
             return True
-        
+
+
         gtk.gdk.threads_leave()
+
+        # Compute the total processing time (in seconds)
+        t1=time()
+        totaltime=round(t1-t0,2)
         # Notification at the end of process
         pynotify.init('notify_user')
-        pynotify.Notification(_("Status"), _("%s saved \n %s restored \n %s failed \n %s already done" 
-                                             % (num_saved, num_restored, num_failed, num_already_done))).show()
+        pynotify.Notification(_("Status"), _("%s saved \n"+
+											  "%s restored \n"+ 
+											  "%s failed \n"+ 
+											  "%s already done \n"+ 
+											  "Took %s sec")%
+											  (num_saved, 
+											  num_restored,
+                                                num_failed,
+                                                num_already_done,
+                                                str(totaltime))).show()
         return False
         
     
@@ -201,7 +221,7 @@ class saveTAGRating(rb.Plugin):
         """
         
         ext4 = pathSong[-5:].lower()
-        ext3 = ext4[1:].lower()
+        ext3 = ext4[1:]
         
         if ext3 == ".mp3":
             return "id3v2"
@@ -301,23 +321,26 @@ class saveTAGRating(rb.Plugin):
         
         """
         global num_saved, num_failed
+        try:
+            # Get the dbrating value (float) of the RhythmboxDB element 
+            dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
+            # Get the dbcount value (integer) of the RhythmboxDB element
+            dbcount = db.entry_get(element, rhythmdb.PROP_PLAY_COUNT)
+         
+            
+            # Get the audio tagging format of the current element
+            format = self._check_recognized_format(path_normalizado)
+            
+            if format is None:
+                raise Exception("Unrecognized format")
+            else:
+                # Audio format is known, call the selector...
+                self._save_db_to(path_normalizado, dbrating, dbcount, format)
+                print("save db to file done")        
         
-        # Get the dbrating value (float) of the RhythmboxDB element 
-        dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
-        # Get the dbcount value (integer) of the RhythmboxDB element
-        dbcount = db.entry_get(element, rhythmdb.PROP_PLAY_COUNT)
-     
-        
-        # Get the audio tagging format of the current element
-        format = self._check_recognized_format(path_normalizado)
-        
-        if format is not None:
-            # Audio format is known, call the selector...
-            self._save_db_to(path_normalizado, dbrating, dbcount, format)
-            print("save db to file done")        
-        else:
-            num_failed += 1
-            print("unrecognized format")
+        except Exception,e:
+                num_failed += 1
+                print(e)
         
 
 
@@ -369,37 +392,42 @@ class saveTAGRating(rb.Plugin):
         - Should be audio format agnostic
         """
         global num_restored, num_failed, num_already_done
-        
-        # Get the audio tagging format of the current element
-        format = self._check_recognized_format(path_normalizado)
-        
-        if format is not None:
-            # Format is known, call the selector...
-            filerating, filecount = self._restore_db_from(path_normalizado, format)
+       
+        try: 
+            # Get the audio tagging format of the current element
+            format = self._check_recognized_format(path_normalizado)
+       
 
-            # Use need commit to commit only if necessary (if the tags read from the file are different)            
-            needcommit = False
+            if format is None:
+               raise Exception("Unrecognized format")
             
-            
-            
-            if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
-                db.set(element, rhythmdb.PROP_RATING, filerating)
-                needcommit = True
-                        
-            if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
-                db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
-                needcommit = True
-            
-            
-            if needcommit:
-                db.commit()
-                num_restored += 1
             else:
-                num_already_done += 1
-            
-        else:
-            num_failed += 1       
-            print("unrecognized format")
+                # Format is known, call the selector...
+                filerating, filecount = self._restore_db_from(path_normalizado, format)
+
+                # Use need commit to commit only if necessary (if the tags read from the file are different)            
+                needcommit = False
+                
+                
+                
+                if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
+                    db.set(element, rhythmdb.PROP_RATING, filerating)
+                    needcommit = True
+                            
+                if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
+                    db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
+                    needcommit = True
+                
+                
+                if needcommit:
+                    db.commit()
+                    num_restored += 1
+                else:
+                    num_already_done += 1
+        
+        except Exception,e:
+                num_failed += 1
+                print(e)
 
 
     def deactivate(self, shell):
