@@ -1,12 +1,31 @@
 Usage :
+- first backup ~/.local/share/rhythmbox/rhythmdb.xml and your audio files in case something goes wrong
 - To save rhythmbox database ratings and playcounts to files tag do :
 right click on mp3 files > save ratings and counts to file
+(it will erase any previous stored ratings and playcounts tags)
 - To restore rhythmbox database ratings and playcounts from files tag do :
 right click on mp3 files > restore ratings and counts from file
+(it will erase rhythmbox database values)
 
-Dépot GIT :
-- mettre un fichier .gitignore dans le dossier local du dépôt et mettre dedans :
+Git repo usage :
+- create a local .gitignore and put the following lines :
+
 *.pyc
 .*
-pour ignorer les fichiers cachés et les fichiers .pyc (généré localement par python)
+*~
+to ignore hidden files, backup files and .pyc files
+
+
+
+Todo :
+- support xiph comments to store ratings/playcounts inside ogg vorbis and flac files
+- new entry to synchronize between rhythmbox database and files (in smart way, for example always set max(filecount,dbcount) for the playcount tag)
+- internationalization
+- menu icons
+- use gui threads to avoid ui locking 
+
+
+Idea :
+- use dbus to save the tag each time a rating is changed or each time a file has been played
+
 
