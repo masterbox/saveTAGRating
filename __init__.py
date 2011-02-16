@@ -210,7 +210,7 @@ class saveTAGRating(rb.Plugin):
         
         return rhytm_rating
 
-    def _convert_fpms_rating_to_rhythmbdb_rating(self, rating):
+    def _convert_fmps_rating_to_rhythmbdb_rating(self, rating):
         """ Function to convert FPMS standard rating (from 0.0 to 1.0) to rhythmbox
         rating (from 0 to 5) """
         rhytm_rating = (float(rating) * 5)
@@ -274,14 +274,14 @@ class saveTAGRating(rb.Plugin):
                     audio.delall('POPM')
                     audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
                     needsave = True
-            fpmslist = audio.getall(u'TXXX:FMPS_Rating')
-            if fpmslist == []:
+            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+            if fmpslist == []:
                 # No existing tag POPM has been found, so create one...
                 audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[u"%.1f" % (float(dbrating)/5)]))
                 needsave = True
             else:
                 # An existing tag POPM has been found, let's check if the rating has changed
-                if self._convert_fpms_rating_to_rhythmbdb_rating(fpmslist[0].text[0].__str__()) != dbrating:
+                if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0].__str__()) != dbrating:
                     # If it has, erase the value of the file an replace it with the db value (converted)
                     audio.delall(u'TXXX:FMPS_Rating')
                     print dbrating
@@ -333,7 +333,7 @@ class saveTAGRating(rb.Plugin):
         converted_dbcount=1.0*count
         
         # Get the existing rating value (if any)
-        existingrating=audio.get('FPMS_RATING')
+        existingrating=audio.get('FMPS_RATING')
         # Get the existing count value (if any)
         existingcount=audio.get('FMPS_PLAYCOUNT')
         
@@ -343,7 +343,7 @@ class saveTAGRating(rb.Plugin):
             # There is no existing rating tag
             if converted_dbrating>0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FPMS_RATING']=[unicode(converted_dbrating)]
+                audio['FMPS_RATING']=[unicode(converted_dbrating)]
                 needsave = True
         else:
             # There is an existing rating tag, if the value has changed...
@@ -351,10 +351,10 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbrating>0:
                     # Update the tag
-                    audio['FPMS_RATING']=[unicode(converted_dbrating)]
+                    audio['FMPS_RATING']=[unicode(converted_dbrating)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
-                    del audio['FPMS_RATING']
+                    del audio['FMPS_RATING']
                 needsave=True
         
         
@@ -362,7 +362,7 @@ class saveTAGRating(rb.Plugin):
             # There is no existing count tag
             if converted_dbcount>0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FPMS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                audio['FMPS_PLAYCOUNT']=[unicode(converted_dbcount)]
                 needsave = True
         else:
             # There is an existing count tag, if the value has changed...
@@ -370,10 +370,10 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbcount>0:
                     # Update the tag
-                    audio['FPMS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                    audio['FMPS_PLAYCOUNT']=[unicode(converted_dbcount)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
-                    del audio['FPMS_PLAYCOUNT']
+                    del audio['FMPS_PLAYCOUNT']
                 needsave=True
         
 
@@ -445,10 +445,10 @@ class saveTAGRating(rb.Plugin):
         if popmlist != []:
             rating = popmlist[0].rating
             filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-        fpmslist = audio.getall(u'TXXX:FMPS_Rating')
-        if fpmslist != []:
-            rating = fpmslist[0].text[0].__str__()
-            filerating = self._convert_fpms_rating_to_rhythmbdb_rating(rating)
+        fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+        if fmpslist != []:
+            rating = fmpslist[0].text[0].__str__()
+            filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
         filecount = 0
         pcntlist = audio.getall('PCNT')
         if pcntlist != []:
@@ -468,7 +468,7 @@ class saveTAGRating(rb.Plugin):
     
     def _restore_db_from_vcomment(self, audio):
         # Get the existing rating value (if any)
-        filerating=audio.get('FPMS_RATING')
+        filerating=audio.get('FMPS_RATING')
         
         if filerating is None:
             convertedfilerating=0
@@ -476,7 +476,7 @@ class saveTAGRating(rb.Plugin):
             convertedfilerating=int(5*float(filerating[0]))
         
         # Get the existing count value (if any)
-        filecount=audio.get('FPMS_PLAYCOUNT')
+        filecount=audio.get('FMPS_PLAYCOUNT')
         print(filecount)
         if filecount is None:
             convertedfilecount=0
