@@ -1,8 +1,22 @@
+Installation :
+
+- First you need to install dependencies by (example for Debian based distro):
+	sudo apt-get install python-mutagen python-notify
+
+- Then to get the latest version of the plugin, do :
+	mkdir ~/.local/share/rhythmbox/plugins/ (if your plugin directory does not exists)
+	cd ~/.local/share/rhythmbox/plugins/
+	git clone git://github.com/masterbox/saveTAGRating
+	
+Installation done !
+
 Usage :
 - first backup ~/.local/share/rhythmbox/rhythmdb.xml and your audio files in case something goes wrong
+
 - To save rhythmbox database ratings and playcounts to files tag do :
 right click on a selection of files (mp3,ogg,oga,flac) > save ratings and counts to file
 (it will erase any previous stored ratings and playcounts tags)
+
 - To restore rhythmbox database ratings and playcounts from files tag do :
 right click on a selection of files (mp3,ogg,oga,flac) > restore ratings and counts from file
 (it will erase rhythmbox database values unless the value from the file are 0)
