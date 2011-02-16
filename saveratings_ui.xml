@@ -3,6 +3,7 @@
     <placeholder name="PluginPlaceholder">
       <menuitem name="savetofilepopup" action="savetofile"/>
       <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+      <menuitem name="cleanalltags" action="cleanalltags"/>
     </placeholder>
   </popup>
 
@@ -10,6 +11,7 @@
     <placeholder name="PluginPlaceholder">
       <menuitem name="savetofilepopup" action="savetofile"/>
       <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+      <menuitem name="cleanalltags" action="cleanalltags"/>
     </placeholder>
   </popup>
 
@@ -17,6 +19,7 @@
     <placeholder name="PluginPlaceholder">
       <menuitem name="savetofilepopup" action="savetofile"/>
       <menuitem name="restorefromfilepopum" action="restorefromfile"/>
+      <menuitem name="cleanalltags" action="cleanalltags"/>
     </placeholder>
   </popup>
 </ui>
