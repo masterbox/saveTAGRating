@@ -32,6 +32,7 @@ to ignore hidden files, backup files and .pyc files
 
 
 Todo :
+- FMPS_PLAYCOUNT for TXXX tag for mp3
 - new entry to synchronize between rhythmbox database and files (in a smart way, for example always set max(filecount,dbcount) for the playcount tag)
 - internationalization
 - menu icons
