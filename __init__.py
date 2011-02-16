@@ -21,7 +21,7 @@
 # Specs for tagging file : 
 # http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
 
-from mutagen.id3 import ID3, POPM, PCNT
+from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
 from os import path
@@ -90,7 +90,7 @@ class saveTAGRating(rb.Plugin):
     def executedoActionOnSelected(self, action, doaction, shell):
         """ Function to apply doaction method on each element that has been selected """        
         # Get a rb.Source instance of the selected page
-        source = shell.get_property("selected_page")
+        source = shell.get_property("selected_source")
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -209,6 +209,12 @@ class saveTAGRating(rb.Plugin):
             rhytm_rating = 5
         
         return rhytm_rating
+
+    def _convert_fpms_rating_to_rhythmbdb_rating(self, rating):
+        """ Function to convert FPMS standard rating (from 0.0 to 1.0) to rhythmbox
+        rating (from 0 to 5) """
+        rhytm_rating = (float(rating) * 5)
+        return rhytm_rating
         
         
         
@@ -255,6 +261,7 @@ class saveTAGRating(rb.Plugin):
         
         
         if dbrating > 0:
+            # First we store it in POPM format
             popmlist = audio.getall('POPM')
             if popmlist == []:
                 # No existing tag POPM has been found, so create one...
@@ -267,7 +274,19 @@ class saveTAGRating(rb.Plugin):
                     audio.delall('POPM')
                     audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
                     needsave = True
-
+            fpmslist = audio.getall(u'TXXX:FMPS_Rating')
+            if fpmslist == []:
+                # No existing tag POPM has been found, so create one...
+                audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[u"%.1f" % (float(dbrating)/5)]))
+                needsave = True
+            else:
+                # An existing tag POPM has been found, let's check if the rating has changed
+                if self._convert_fpms_rating_to_rhythmbdb_rating(fpmslist[0].text[0].__str__()) != dbrating:
+                    # If it has, erase the value of the file an replace it with the db value (converted)
+                    audio.delall(u'TXXX:FMPS_Rating')
+                    print dbrating
+                    audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[u"%.1f" % (float(dbrating)/5)]))
+                    needsave = True            
             
         if dbcount > 0:
             pcntlist = audio.getall('PCNT')
@@ -426,7 +445,10 @@ class saveTAGRating(rb.Plugin):
         if popmlist != []:
             rating = popmlist[0].rating
             filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-        
+        fpmslist = audio.getall(u'TXXX:FMPS_Rating')
+        if fpmslist != []:
+            rating = fpmslist[0].text[0].__str__()
+            filerating = self._convert_fpms_rating_to_rhythmbdb_rating(rating)
         filecount = 0
         pcntlist = audio.getall('PCNT')
         if pcntlist != []:
@@ -500,7 +522,6 @@ class saveTAGRating(rb.Plugin):
             else:
                 # Format is known, call the selector...
                 filerating, filecount = self._restore_db_from(path_normalizado, format)
-
                 # Use need commit to commit only if necessary (if the tags read from the file are different)            
                 needcommit = False
                 
@@ -512,7 +533,6 @@ class saveTAGRating(rb.Plugin):
                 if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
                     db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
                     needcommit = True
-                
                 
                 if needcommit:
                     db.commit()
