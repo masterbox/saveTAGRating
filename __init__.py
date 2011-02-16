@@ -55,6 +55,13 @@ class saveTAGRating(rb.Plugin):
                                  'saveTAGRating' # icon
                                  )
         
+        # One to clean all tag (POPM,PCNT, TXXX, FMPS, etc...)
+        self.action3 = gtk.Action('cleanalltags', #name 
+                                 _('Remove rating/playcount tags of the selected files'), #label
+                                 _('Remove rating/playcount tags of the selected files'), #tooltip
+                                 'saveTAGRating' # icon
+                                 )
+        
         # TODO: rajouter une action plus évoluée pour la synchro bidirectionnelle ?
         # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
         
@@ -64,6 +71,7 @@ class saveTAGRating(rb.Plugin):
         # Define callback methods on these actions
         self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
         self.action2.connect('activate', self.executedoActionOnSelected, self.restoreRhythmDBFromFile, shell)
+        self.action3.connect('activate', self.executedoActionOnSelected, self.cleanAllTags, shell)
         
         # Un autre menu pour une autre action (qui s'appliquerait sur les éléments sélectionnés aurait la forme suivante :
         #self.actionX.connect('activate', self.executedoActionOnSelected,self.une_methode_a_definir_dans_la_classe, shell)
@@ -73,6 +81,7 @@ class saveTAGRating(rb.Plugin):
         self.action_group = gtk.ActionGroup('saveTAGRatingPluginActions')
         self.action_group.add_action(self.action)
         self.action_group.add_action(self.action2)
+        self.action_group.add_action(self.action3)
         self.uim = shell.get_ui_manager ()
         self.uim.insert_action_group(self.action_group, 0)
         
@@ -90,15 +99,19 @@ class saveTAGRating(rb.Plugin):
     def executedoActionOnSelected(self, action, doaction, shell):
         """ Function to apply doaction method on each element that has been selected """        
         # Get a rb.Source instance of the selected page
-        source = shell.get_property("selected_source")
+        try:
+            source = shell.get_property("selected_source")
+        except TypeError:
+            source = shell.get_property("selected_page")
+     
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
         selected = entryview.get_selected_entries()
         
         # Global variables to store statistics
-        global num_saved, num_failed, num_restored, num_already_done
-        num_saved, num_failed, num_restored, num_already_done = 0, 0, 0, 0
+        global num_saved, num_failed, num_restored, num_already_done, num_cleaned
+        num_saved, num_failed, num_restored, num_already_done, num_cleaned = 0, 0, 0, 0, 0
         
                 
         # Get the  RhythmDBTree from the shell to do some 
@@ -126,11 +139,11 @@ class saveTAGRating(rb.Plugin):
         
         # Store the start time before we start a long computation
         global t0
-        t0=time()
+        t0 = time()
 
         gobject.idle_add(self.idle_cb_loop_on_selected, # name of the callback  
                         selected, # additionnal parameters
-                        db,  #  --
+                        db, #  --
                         doaction, # --
                         # named parameter to set an idle priority (background)
                         priority=gobject.PRIORITY_DEFAULT_IDLE) 
@@ -143,7 +156,7 @@ class saveTAGRating(rb.Plugin):
         """ Use chunked idle callbacks to perform IO operation in an asynchronous way
         See http://live.gnome.org/RhythmboxPlugins/WritingGuide#Using_idle_callbacks_for_repeated_tasks
         """
-        global num_saved, num_failed, num_restored, num_already_done
+        global num_cleaned, num_saved, num_failed, num_restored, num_already_done
         global iel
         global t0
         
@@ -175,19 +188,21 @@ class saveTAGRating(rb.Plugin):
         gtk.gdk.threads_leave()
 
         # Compute the total processing time (in seconds)
-        t1=time()
-        totaltime=round(t1-t0,2)
+        t1 = time()
+        totaltime = round(t1 - t0, 2)
         # Notification at the end of process
         pynotify.init('notify_user')
-        pynotify.Notification(_("Status"), _("%s saved \n"+
-											  "%s restored \n"+ 
-											  "%s failed \n"+ 
-											  "%s already done \n"+ 
-											  "Took %s sec")%
-											  (num_saved, 
+        pynotify.Notification(_("Status"), _("%s saved \n" + 
+											  "%s restored \n" + 
+											  "%s failed \n" + 
+											  "%s already done \n" + 
+                                              "%s cleaned \n" + 
+											  "Took %s sec") % 
+											  (num_saved,
 											  num_restored,
                                                 num_failed,
                                                 num_already_done,
+                                                num_cleaned,
                                                 str(totaltime))).show()
         return False
         
@@ -213,7 +228,7 @@ class saveTAGRating(rb.Plugin):
     def _convert_fmps_rating_to_rhythmbdb_rating(self, rating):
         """ Function to convert FMPS standard rating (from 0.0 to 1.0) to rhythmbox
         rating (from 0 to 5) """
-        rhytm_rating = (float(rating) * 5)
+        rhytm_rating = 5 * float(rating)
         return rhytm_rating
         
         
@@ -235,9 +250,9 @@ class saveTAGRating(rb.Plugin):
         
         if ext3 == ".mp3":
             return "id3v2"
-        elif ext3==".ogg" or ext3==".oga":
+        elif ext3 == ".ogg" or ext3 == ".oga":
             return "oggvorbis"
-        elif ext4==".flac":
+        elif ext4 == ".flac":
             return "flac"
         else:
             return None            
@@ -274,18 +289,18 @@ class saveTAGRating(rb.Plugin):
                     audio.delall('POPM')
                     audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
                     needsave = True
-            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+            fmpslist = audio.getall(u'TXXX:FMPS_RATING')
             if fmpslist == []:
-                # No existing tag POPM has been found, so create one...
-                audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[u"%.1f" % (float(dbrating)/5)]))
+                # No existing tag TXXX for FMPS has been found, so create one...
+                audio.add(TXXX(encoding=3, desc=u"FMPS_RATING", text=[unicode(0.2 * dbrating)]))
                 needsave = True
             else:
-                # An existing tag POPM has been found, let's check if the rating has changed
-                if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0].__str__()) != dbrating:
+                # An existing tag TXXX for FMPS has been found, let's check if the rating has changed
+                if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
                     # If it has, erase the value of the file an replace it with the db value (converted)
-                    audio.delall(u'TXXX:FMPS_Rating')
+                    audio.delall(u'TXXX:FMPS_RATING')
                     print dbrating
-                    audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[u"%.1f" % (float(dbrating)/5)]))
+                    audio.add(TXXX(encoding=3, desc=u"FMPS_RATING", text=[unicode(0.2 * dbrating)]))
                     needsave = True            
             
         if dbcount > 0:
@@ -311,12 +326,12 @@ class saveTAGRating(rb.Plugin):
 
 
 
-    def _save_db_to_oggvorbis(self,pathSong,dbrating,dbcount):
+    def _save_db_to_oggvorbis(self, pathSong, dbrating, dbcount):
         audio = OggVorbis(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
         pass
     
-    def _save_db_to_flac(self,pathSong,dbrating,dbcount):
+    def _save_db_to_flac(self, pathSong, dbrating, dbcount):
         audio = FLAC(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
         pass
@@ -328,53 +343,53 @@ class saveTAGRating(rb.Plugin):
         """
         global num_saved, num_already_done
         # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
-        converted_dbrating=0.2*rating
+        converted_dbrating = 0.2 * rating
         # Convert the count from the db (integer) to a float 
-        converted_dbcount=1.0*count
+        converted_dbcount = 1.0 * count
         
         # Get the existing rating value (if any)
-        existingrating=audio.get('FMPS_RATING')
+        existingrating = audio.get('FMPS_RATING')
         # Get the existing count value (if any)
-        existingcount=audio.get('FMPS_PLAYCOUNT')
+        existingcount = audio.get('FMPS_PLAYCOUNT')
         
         needsave = False
         
         if existingrating is None:
             # There is no existing rating tag
-            if converted_dbrating>0:
+            if converted_dbrating > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FMPS_RATING']=[unicode(converted_dbrating)]
+                audio['FMPS_RATING'] = [unicode(converted_dbrating)]
                 needsave = True
         else:
             # There is an existing rating tag, if the value has changed...
-            if float(existingrating[0])!=converted_dbrating:
+            if float(existingrating[0]) != converted_dbrating:
                 # And if the value we want to save is greater than 0..
-                if converted_dbrating>0:
+                if converted_dbrating > 0:
                     # Update the tag
-                    audio['FMPS_RATING']=[unicode(converted_dbrating)]
+                    audio['FMPS_RATING'] = [unicode(converted_dbrating)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
                     del audio['FMPS_RATING']
-                needsave=True
+                needsave = True
         
         
         if existingcount is None:
             # There is no existing count tag
-            if converted_dbcount>0:
+            if converted_dbcount > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FMPS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                audio['FMPS_PLAYCOUNT'] = [unicode(converted_dbcount)]
                 needsave = True
         else:
             # There is an existing count tag, if the value has changed...
-            if float(existingcount[0])!=converted_dbcount:
+            if float(existingcount[0]) != converted_dbcount:
                 # And if the value we want to save is greater than 0..
-                if converted_dbcount>0:
+                if converted_dbcount > 0:
                     # Update the tag
-                    audio['FMPS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                    audio['FMPS_PLAYCOUNT'] = [unicode(converted_dbcount)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
                     del audio['FMPS_PLAYCOUNT']
-                needsave=True
+                needsave = True
         
 
         if needsave:
@@ -426,7 +441,7 @@ class saveTAGRating(rb.Plugin):
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
                 print("save db to file done")        
         
-        except Exception,e:
+        except Exception, e:
                 num_failed += 1
                 print(e)
         
@@ -445,10 +460,14 @@ class saveTAGRating(rb.Plugin):
         if popmlist != []:
             rating = popmlist[0].rating
             filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-        fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+        fmpslist = audio.getall(u'TXXX:FMPS_RATING')
         if fmpslist != []:
-            rating = fmpslist[0].text[0].__str__()
+            rating = fmpslist[0].text[0] # is an unicode string
             filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
+            
+        #Attention, filerating prendra ici la valeur de TXXX par défaut
+        # mais si il n'pas de TXXX, alors la valeur POPM sera choisie
+        
         filecount = 0
         pcntlist = audio.getall('PCNT')
         if pcntlist != []:
@@ -458,35 +477,34 @@ class saveTAGRating(rb.Plugin):
         
         
     
-    def _restore_db_from_oggvorbis(self,pathSong):
+    def _restore_db_from_oggvorbis(self, pathSong):
         audio = OggVorbis(pathSong)
         return self._restore_db_from_vcomment(audio)
     
-    def _restore_db_from_flac(self,pathSong):
+    def _restore_db_from_flac(self, pathSong):
         audio = FLAC(pathSong)
         return self._restore_db_from_vcomment(audio)
     
     def _restore_db_from_vcomment(self, audio):
         # Get the existing rating value (if any)
-        filerating=audio.get('FMPS_RATING')
+        filerating = audio.get('FMPS_RATING')
         
         if filerating is None:
-            convertedfilerating=0
+            convertedfilerating = 0
         else:
-            convertedfilerating=int(5*float(filerating[0]))
+            convertedfilerating = int(5 * float(filerating[0]))
         
         # Get the existing count value (if any)
-        filecount=audio.get('FMPS_PLAYCOUNT')
-        print(filecount)
+        filecount = audio.get('FMPS_PLAYCOUNT')
+
         if filecount is None:
-            convertedfilecount=0
+            convertedfilecount = 0
         else:
-            convertedfilecount=int(float(filecount[0]))
+            convertedfilecount = int(float(filecount[0]))
         
         
         # Returned converted filerating and filecount
-        print(convertedfilerating,convertedfilecount)
-        return convertedfilerating,convertedfilecount
+        return convertedfilerating, convertedfilecount
         
     
     
@@ -540,10 +558,49 @@ class saveTAGRating(rb.Plugin):
                 else:
                     num_already_done += 1
         
-        except Exception,e:
+        except Exception, e:
                 num_failed += 1
                 print(e)
 
+
+    def cleanAllTags(self, db, element, path_normalizado):
+        global num_cleaned, num_failed
+        try: 
+            # Get the audio tagging format of the current element
+            format = self._check_recognized_format(path_normalizado)
+            if format is None:
+               raise Exception("Unrecognized format")
+            
+            else:
+                if format == "id3v2":
+                    audio = ID3(path_normalizado)
+                    if audio.has_key('POPM'):
+                        audio.delall('POPM')
+                    if audio.has_key('PCNT'):
+                        audio.delall('PCNT')
+                    if audio.has_key(u'TXXX:FMPS_RATING'):
+                        audio.delall(u'TXXX:FMPS_RATING')
+                    audio.save()
+                    num_cleaned+=1
+                elif format == "oggvorbis":
+                    audio = OggVorbis(path_normalizado)
+                    if audio.has_key('FMPS_RATING'):
+                        del audio['FMPS_RATING']
+                    if audio.has_key('FMPS_PLAYCOUNT'):
+                        del audio['FMPS_PLAYCOUNT']
+                    audio.save()
+                    num_cleaned+=1
+                elif format == "flac":
+                    audio = FLAC(path_normalizado)
+                    if audio.has_key('FMPS_RATING'):
+                        del audio['FMPS_RATING']
+                    if audio.has_key('FMPS_PLAYCOUNT'):
+                        del audio['FMPS_PLAYCOUNT']
+                    audio.save()
+                    num_cleaned+=1
+        except Exception, e:
+                num_failed += 1
+                print(e)
 
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
