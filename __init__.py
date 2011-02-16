@@ -18,9 +18,12 @@
 #       Matthieu Bosc (mbosc77@gmail.com)
 #       Vysserk3  (vysserk3@gmail.com)
 #
-
+# Specs for tagging file : 
+# http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
 
 from mutagen.id3 import ID3, POPM, PCNT
+from mutagen.flac import FLAC
+from mutagen.oggvorbis import OggVorbis
 from os import path
 from urllib import url2pathname
 import gtk
@@ -214,7 +217,8 @@ class saveTAGRating(rb.Plugin):
         Format detection is extension based, so please name well your audio files
         Return the type of tag that is going to be used for the selected format
         mp3 >>>> id3v2
-        ogg and flac >>> xiphcomment
+        ogg and oga >>> oggvorbis
+        flac >>> flac
         etc...
         return value should be xxx where xxx is in a method _save_db_to_xxx
         return None if unknown format
@@ -225,12 +229,10 @@ class saveTAGRating(rb.Plugin):
         
         if ext3 == ".mp3":
             return "id3v2"
-#        elif ext3==".oga":
-#            return "xiphcomment"
-#        elif ext3==".ogg":
-#            return "xiphcomment"
-#        elif ext4==".flac":
-#            return "xiphcomment"
+        elif ext3==".ogg" or ext3==".oga":
+            return "oggvorbis"
+        elif ext4==".flac":
+            return "flac"
         else:
             return None            
 
@@ -288,19 +290,86 @@ class saveTAGRating(rb.Plugin):
             num_already_done += 1
 
 
-            
-    def _save_db_to_xiphcomment(self, pathSong, dbrating, dbcount):
-        """" Save rating and playcount from Rhythmbox db to xiph comment (vorbis)
-        for ogg vorbis and flac """
-        #TODO: prendre en charge le Ogg et le FLAC
-        # il semblerait qu'il n'y ait pas de standard pour le Ogg et le FLAC, comme pour ID3
-        # à creuser
+
+
+    def _save_db_to_oggvorbis(self,pathSong,dbrating,dbcount):
+        audio = OggVorbis(pathSong)
+        self._save_db_to_vcomment(audio, dbrating, dbcount)
         pass
+    
+    def _save_db_to_flac(self,pathSong,dbrating,dbcount):
+        audio = FLAC(pathSong)
+        self._save_db_to_vcomment(audio, dbrating, dbcount)
+        pass
+            
+    def _save_db_to_vcomment(self, audio, rating, count):
+        """" Common code for _save_db_to_oggvorbis and _save_db_to_flac (both use vorbis comment)
+         see http://www.xiph.org/vorbis/doc/v-comment.html
+         http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
+        """
+        global num_saved, num_already_done
+        # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
+        converted_dbrating=0.2*rating
+        # Convert the count from the db (integer) to a float 
+        converted_dbcount=1.0*count
+        
+        # Get the existing rating value (if any)
+        existingrating=audio.get('FPMS_RATING')
+        # Get the existing count value (if any)
+        existingcount=audio.get('FMPS_PLAYCOUNT')
+        
+        needsave = False
+        
+        if existingrating is None:
+            # There is no existing rating tag
+            if converted_dbrating>0:
+                # Create one, only if the value we want to save is greater than 0
+                audio['FPMS_RATING']=[unicode(converted_dbrating)]
+                needsave = True
+        else:
+            # There is an existing rating tag, if the value has changed...
+            if existingrating!=converted_dbrating:
+                # And if the value we want to save is greater than 0..
+                if converted_dbrating>0:
+                    # Update the tag
+                    audio['FPMS_RATING']=[unicode(converted_dbrating)]
+                else:
+                    # If the value we want to save is 0, remove the tag from the comment
+                    del audio['FPMS_RATING']
+                needsave=True
+        
+        
+        if existingcount is None:
+            # There is no existing count tag
+            if converted_dbcount>0:
+                # Create one, only if the value we want to save is greater than 0
+                audio['FPMS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                needsave = True
+        else:
+            # There is an existing count tag, if the value has changed...
+            if existingcount!=converted_dbcount:
+                # And if the value we want to save is greater than 0..
+                if converted_dbcount>0:
+                    # Update the tag
+                    audio['FPMS_PLAYCOUNT']=[unicode(converted_dbcount)]
+                else:
+                    # If the value we want to save is 0, remove the tag from the comment
+                    del audio['FPMS_PLAYCOUNT']
+                needsave=True
+        
+
+        if needsave:
+            # save to file only if needed
+            audio.save()
+            num_saved += 1
+        else:
+            num_already_done += 1
+
     
 
 
     def _save_db_to(self, pathSong, dbrating, dbcount, format):
-        """ this Selector use getattr to select the right function to call
+        """ This Selector use getattr to select the right function to call
         Available format are :
         id3v2
         xiphcomment
@@ -366,18 +435,45 @@ class saveTAGRating(rb.Plugin):
         return (filerating, filecount)
         
         
+    
+    def _restore_db_from_oggvorbis(self,pathSong):
+        audio = OggVorbis(pathSong)
+        return self._restore_db_from_vcomment(audio)
+    
+    def _restore_db_from_flac(self,audio,filerating,filecount):
+        audio = FLAC(pathSong)
+        return self._restore_db_from_vcomment(audio)
+    
+    def _restore_db_from_vcomment(self, audio):
+        # Get the existing rating value (if any)
+        filerating=audio.get('FPMS_RATING')
         
-
-    def restore_db_from_xiphcomment(self, pathSong, filerating, filecount):
-        pass
-        #return a pair (filerating, filecount)
+        if filerating is None:
+            convertedfilerating=0
+        else:
+            convertedfilerating=int(5*float(filerating[0]))
+        
+        # Get the existing count value (if any)
+        filecount=audio.get('FPMS_PLAYCOUNT')
+        print(filecount)
+        if filecount is None:
+            convertedfilecount=0
+        else:
+            convertedfilecount=int(float(filecount[0]))
+        
+        
+        # Returned converted filerating and filecount
+        print(convertedfilerating,convertedfilecount)
+        return convertedfilerating,convertedfilecount
+        
     
     
     def _restore_db_from(self, pathSong, format):
         """ this Selector use getattr to select the right function to call
         Available format are :
         id3v2
-        xiphcomment
+        oggvorbis
+        flac
         etc...
         """
         
@@ -407,7 +503,6 @@ class saveTAGRating(rb.Plugin):
 
                 # Use need commit to commit only if necessary (if the tags read from the file are different)            
                 needcommit = False
-                
                 
                 
                 if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
