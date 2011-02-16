@@ -211,7 +211,7 @@ class saveTAGRating(rb.Plugin):
         return rhytm_rating
 
     def _convert_fmps_rating_to_rhythmbdb_rating(self, rating):
-        """ Function to convert FPMS standard rating (from 0.0 to 1.0) to rhythmbox
+        """ Function to convert FMPS standard rating (from 0.0 to 1.0) to rhythmbox
         rating (from 0 to 5) """
         rhytm_rating = (float(rating) * 5)
         return rhytm_rating
@@ -347,7 +347,7 @@ class saveTAGRating(rb.Plugin):
                 needsave = True
         else:
             # There is an existing rating tag, if the value has changed...
-            if existingrating!=converted_dbrating:
+            if float(existingrating[0])!=converted_dbrating:
                 # And if the value we want to save is greater than 0..
                 if converted_dbrating>0:
                     # Update the tag
@@ -366,7 +366,7 @@ class saveTAGRating(rb.Plugin):
                 needsave = True
         else:
             # There is an existing count tag, if the value has changed...
-            if existingcount!=converted_dbcount:
+            if float(existingcount[0])!=converted_dbcount:
                 # And if the value we want to save is greater than 0..
                 if converted_dbcount>0:
                     # Update the tag
@@ -462,7 +462,7 @@ class saveTAGRating(rb.Plugin):
         audio = OggVorbis(pathSong)
         return self._restore_db_from_vcomment(audio)
     
-    def _restore_db_from_flac(self,audio,filerating,filecount):
+    def _restore_db_from_flac(self,pathSong):
         audio = FLAC(pathSong)
         return self._restore_db_from_vcomment(audio)
     
