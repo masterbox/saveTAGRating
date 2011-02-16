@@ -169,7 +169,7 @@ class saveTAGRating(rb.Plugin):
         
         
         
-        while iel < len(selected) and count < 1000:
+        while iel < len(selected) and count < 10:
             element = selected[iel]
             uri = element.get_playback_uri()
             dirpath = uri.rpartition('/')[0]
