@@ -25,6 +25,7 @@ from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
 from os import path
+import sys
 from urllib import url2pathname
 import gtk
 import pynotify
@@ -66,7 +67,8 @@ class saveTAGRating(rb.Plugin):
         # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
         
         # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
-        self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
+        #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
+        self.pluginrootpath = sys.path[0]+"/"
         
         # Define callback methods on these actions
         self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
