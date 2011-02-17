@@ -146,7 +146,7 @@ class saveTAGRating(rb.Plugin):
                         db, #  --
                         doaction, # --
                         # named parameter to set an idle priority (background)
-                        priority=gobject.PRIORITY_DEFAULT_IDLE) 
+                        priority=gobject.PRIORITY_LOW) 
         
         
         
