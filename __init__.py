@@ -564,7 +564,7 @@ class saveTAGRating(rb.Plugin):
 
 
     def cleanAllTags(self, db, element, path_normalizado):
-        global num_cleaned, num_failed
+        global num_cleaned, num_failed,num_already_done
         try: 
             # Get the audio tagging format of the current element
             format = self._check_recognized_format(path_normalizado)
@@ -572,32 +572,44 @@ class saveTAGRating(rb.Plugin):
                raise Exception("Unrecognized format")
             
             else:
+                
+                needsave=False
                 if format == "id3v2":
                     audio = ID3(path_normalizado)
                     if audio.has_key('POPM'):
                         audio.delall('POPM')
+                        needsave=True
                     if audio.has_key('PCNT'):
                         audio.delall('PCNT')
+                        needsave=True
                     if audio.has_key(u'TXXX:FMPS_RATING'):
                         audio.delall(u'TXXX:FMPS_RATING')
-                    audio.save()
-                    num_cleaned+=1
+                        needsave=True
+                    
+                    
                 elif format == "oggvorbis":
                     audio = OggVorbis(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
+                        needsave=True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
-                    audio.save()
-                    num_cleaned+=1
+                        needsave=True
                 elif format == "flac":
                     audio = FLAC(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
+                        needsave=True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
+                        needsave=True
+                
+                if needsave:
                     audio.save()
                     num_cleaned+=1
+                else:
+                    num_already_done+=1
+    
         except Exception, e:
                 num_failed += 1
                 print(e)
