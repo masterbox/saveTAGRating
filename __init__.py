@@ -43,33 +43,51 @@ class saveTAGRating(rb.Plugin):
         rb.Plugin.__init__(self)
             
     def activate(self, shell):
+        # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
+        #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
+        self.pluginrootpath = sys.path[0]+"/"
+        
+        
+        # Create stock id for icons (save,restore, clean)
+        iconfactory = gtk.IconFactory()
+        stock_ids = gtk.stock_list_ids()
+        for stock_id, file in [('save_rating_playcount', 'save.png'),
+                               ('restore_rating_playcount', 'restore.png'),
+                               ('clean_alltags','clean.png')]:
+            # only load image files when our stock_id is not present
+            if stock_id not in stock_ids:
+              pixbuf = gtk.gdk.pixbuf_new_from_file(self.pluginrootpath+file)
+              iconset = gtk.IconSet(pixbuf)
+              iconfactory.add(stock_id, iconset)
+        iconfactory.add_default()
+        
+       
+        
         # Create two gtkAction
         # One to save to file 
         self.action = gtk.Action('savetofile', #name 
                                  _('Save ratings and playcounts to files'), #label
                                  _('Save ratings and playcounts to files'), #tooltip
-                                 'saveTAGRating' # icon
+                                 'save_rating_playcount' # icon
                                  )
         # One to restore from file
         self.action2 = gtk.Action('restorefromfile', #name 
                                  _('Restore ratings and playcounts from files'), #label
                                  _('Restore ratings and playcounts from files'), #tooltip
-                                 'saveTAGRating' # icon
+                                 'restore_rating_playcount' # icon
                                  )
         
         # One to clean all tag (POPM,PCNT, TXXX, FMPS, etc...)
         self.action3 = gtk.Action('cleanalltags', #name 
                                  _('Remove rating/playcount tags of the selected files'), #label
                                  _('Remove rating/playcount tags of the selected files'), #tooltip
-                                 'saveTAGRating' # icon
+                                 'clean_alltags' # icon
                                  )
         
         # TODO: rajouter une action plus évoluée pour la synchro bidirectionnelle ?
         # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
         
-        # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
-        #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
-        self.pluginrootpath = sys.path[0]+"/"
+  
         
         # Define callback methods on these actions
         self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
@@ -675,7 +693,9 @@ class saveTAGRating(rb.Plugin):
         finally:
             if audio: del audio
             
-            
+    def my_register_iconsets(icon_info):
+      pass
+      
             
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
