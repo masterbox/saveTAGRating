@@ -289,18 +289,18 @@ class saveTAGRating(rb.Plugin):
                     audio.delall('POPM')
                     audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
                     needsave = True
-            fmpslist = audio.getall(u'TXXX:FMPS_RATING')
+            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
             if fmpslist == []:
                 # No existing tag TXXX for FMPS has been found, so create one...
-                audio.add(TXXX(encoding=3, desc=u"FMPS_RATING", text=[unicode(0.2 * dbrating)]))
+                audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
                 needsave = True
             else:
                 # An existing tag TXXX for FMPS has been found, let's check if the rating has changed
                 if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
                     # If it has, erase the value of the file an replace it with the db value (converted)
-                    audio.delall(u'TXXX:FMPS_RATING')
+                    audio.delall(u'TXXX:FMPS_Rating')
                     print dbrating
-                    audio.add(TXXX(encoding=3, desc=u"FMPS_RATING", text=[unicode(0.2 * dbrating)]))
+                    audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
                     needsave = True            
             
         if dbcount > 0:
@@ -460,7 +460,7 @@ class saveTAGRating(rb.Plugin):
         if popmlist != []:
             rating = popmlist[0].rating
             filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-        fmpslist = audio.getall(u'TXXX:FMPS_RATING')
+        fmpslist = audio.getall(u'TXXX:FMPS_Rating')
         if fmpslist != []:
             rating = fmpslist[0].text[0] # is an unicode string
             filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
@@ -582,8 +582,8 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('PCNT'):
                         audio.delall('PCNT')
                         needsave=True
-                    if audio.has_key(u'TXXX:FMPS_RATING'):
-                        audio.delall(u'TXXX:FMPS_RATING')
+                    if audio.has_key(u'TXXX:FMPS_Rating'):
+                        audio.delall(u'TXXX:FMPS_Rating')
                         needsave=True
                     
                     
@@ -613,7 +613,12 @@ class saveTAGRating(rb.Plugin):
         except Exception, e:
                 num_failed += 1
                 print(e)
-
+                
+        finally:
+            if audio: del audio
+            
+            
+            
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
         self.uim.remove_ui (self.ui_id)
