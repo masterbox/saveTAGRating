@@ -24,6 +24,7 @@
 from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
+from mutagen.mp4 import MP4
 from os import path
 import sys
 from urllib import url2pathname
@@ -242,6 +243,7 @@ class saveTAGRating(rb.Plugin):
         mp3 >>>> id3v2
         ogg and oga >>> oggvorbis
         flac >>> flac
+        mp4 and m4a >>> mp4
         etc...
         return value should be xxx where xxx is in a method _save_db_to_xxx
         return None if unknown format
@@ -256,6 +258,8 @@ class saveTAGRating(rb.Plugin):
             return "oggvorbis"
         elif ext4 == ".flac":
             return "flac"
+        elif ext3 ==".mp4" or ext3==".m4a":
+            return "mp4"
         else:
             return None            
 
@@ -337,11 +341,32 @@ class saveTAGRating(rb.Plugin):
         audio = FLAC(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
         pass
-            
+   
+    
     def _save_db_to_vcomment(self, audio, rating, count):
-        """" Common code for _save_db_to_oggvorbis and _save_db_to_flac (both use vorbis comment)
-         see http://www.xiph.org/vorbis/doc/v-comment.html
-         http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
+       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',rating,count)
+
+    
+    def _save_db_to_mp4(self, pathSong, dbrating, dbcount):
+        audio=MP4(pathSong)
+        
+        self._save_db_to_dict_tags(audio, 
+                                   '----:com.apple.iTunes:FMPS_Rating',
+                                    '----:com.apple.iTunes:FMPS_Playcount',dbrating,dbcount)
+    
+    
+     
+    def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,rating,count):
+        """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 
+        that use dictionnary tags to save rating and playcount. 
+        Only the identifier (dictionnary key) changes, so you need to provide them.
+        
+        for vorbis comment, identifiers are 'FMPS_RATING' and 'FMPS_PLAYCOUNT'
+        for mp4, identifiers are '----:com.apple.iTunes:FMPS_Rating' and  
+        '----:com.apple.iTunes:FMPS_Playcount'
+        
+        etc...
+         See http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
         """
         global num_saved, num_already_done
         # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
@@ -350,17 +375,17 @@ class saveTAGRating(rb.Plugin):
         converted_dbcount = 1.0 * count
         
         # Get the existing rating value (if any)
-        existingrating = audio.get('FMPS_RATING')
+        existingrating = audio.get(rating_identifier)
         # Get the existing count value (if any)
-        existingcount = audio.get('FMPS_PLAYCOUNT')
+        existingcount = audio.get(playcount_identifier)
+        
         
         needsave = False
-        
         if existingrating is None:
             # There is no existing rating tag
             if converted_dbrating > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FMPS_RATING'] = [unicode(converted_dbrating)]
+                audio[rating_identifier] = [unicode(converted_dbrating)]
                 needsave = True
         else:
             # There is an existing rating tag, if the value has changed...
@@ -368,10 +393,10 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbrating > 0:
                     # Update the tag
-                    audio['FMPS_RATING'] = [unicode(converted_dbrating)]
+                    audio[rating_identifier] = [unicode(converted_dbrating)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
-                    del audio['FMPS_RATING']
+                    del audio[rating_identifier]
                 needsave = True
         
         
@@ -379,7 +404,7 @@ class saveTAGRating(rb.Plugin):
             # There is no existing count tag
             if converted_dbcount > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio['FMPS_PLAYCOUNT'] = [unicode(converted_dbcount)]
+                audio[playcount_identifier] = [unicode(converted_dbcount)]
                 needsave = True
         else:
             # There is an existing count tag, if the value has changed...
@@ -387,28 +412,29 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbcount > 0:
                     # Update the tag
-                    audio['FMPS_PLAYCOUNT'] = [unicode(converted_dbcount)]
+                    audio[playcount_identifier] = [unicode(converted_dbcount)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
-                    del audio['FMPS_PLAYCOUNT']
+                    del audio[playcount_identifier]
                 needsave = True
-        
 
         if needsave:
             # save to file only if needed
             audio.save()
+            
             num_saved += 1
         else:
             num_already_done += 1
-
     
-
 
     def _save_db_to(self, pathSong, dbrating, dbcount, format):
         """ This Selector use getattr to select the right function to call
         Available format are :
         id3v2
-        xiphcomment
+        oggvorbis
+        flac
+        mp4
+        apev2
         etc...
         
         For example, if the format is id3v2, then _save_db_to_id3v2 will be called
@@ -487,17 +513,40 @@ class saveTAGRating(rb.Plugin):
         audio = FLAC(pathSong)
         return self._restore_db_from_vcomment(audio)
     
+    
     def _restore_db_from_vcomment(self, audio):
+        return self._restore_db_from_dict_tags('FMPS_RATING', 
+                                               'FMPS_PLAYCOUNT', 
+                                               audio)
+        
+    def _restore_db_from_mp4(self,pathSong):
+        audio=MP4(pathSong)
+        return self._restore_db_from_dict_tags('----:com.apple.iTunes:FMPS_Rating', 
+                                               '----:com.apple.iTunes:FMPS_Playcount', 
+                                               audio)
+    
+    
+    def _restore_db_from_dict_tags(self, rating_identifier,playcount_identifier,audio):
+        """" Common code for _restore_db_from_vcomment  and _restore_db_from_mp4 
+        that use dictionnary tags to save rating and playcount. 
+        Only the identifier (dictionnary key) changes, so you need to provide them.
+        
+        for vorbis comment, identifiers are 'FMPS_RATING' and 'FMPS_PLAYCOUNT'
+        for mp4, identifiers are '----:com.apple.iTunes:FMPS_Rating' and  
+        '----:com.apple.iTunes:FMPS_Playcount' 
+        
+        """
+        
         # Get the existing rating value (if any)
-        filerating = audio.get('FMPS_RATING')
+        filerating = audio.get(rating_identifier)
         
         if filerating is None:
             convertedfilerating = 0
         else:
-            convertedfilerating = int(5 * float(filerating[0]))
+            convertedfilerating = self._convert_fmps_rating_to_rhythmbdb_rating(filerating[0])
         
         # Get the existing count value (if any)
-        filecount = audio.get('FMPS_PLAYCOUNT')
+        filecount = audio.get(playcount_identifier)
 
         if filecount is None:
             convertedfilecount = 0
@@ -507,7 +556,6 @@ class saveTAGRating(rb.Plugin):
         
         # Returned converted filerating and filecount
         return convertedfilerating, convertedfilecount
-        
     
     
     def _restore_db_from(self, pathSong, format):
@@ -605,7 +653,15 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
                         needsave=True
-                
+                elif format =="mp4":
+                    audio = MP4(path_normalizado)
+                    if audio.has_key('----:com.apple.iTunes:FMPS_Rating'):
+                        del audio['----:com.apple.iTunes:FMPS_Rating']
+                        needsave=True
+                    if audio.has_key('----:com.apple.iTunes:FMPS_Playcount'):
+                        del audio['----:com.apple.iTunes:FMPS_Playcount']
+                        needsave=True
+
                 if needsave:
                     audio.save()
                     num_cleaned+=1
@@ -630,4 +686,6 @@ class saveTAGRating(rb.Plugin):
         del self.action_group
         del self.action
         del self.action2
+        del self.action3
         del self.pluginrootpath
+        print("Plugin deactivated")
