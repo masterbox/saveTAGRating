@@ -567,7 +567,7 @@ class saveTAGRating(rb.Plugin):
 
     def _restore_db_from_musepack(self,pathSong):
         audio=Musepack(pathSong)
-        return self._restoer_db_from_dict_tags('FMPS_RATING', 
+        return self._restore_db_from_dict_tags('FMPS_RATING', 
                                                'FMPS_PLAYCOUNT', 
                                                audio)
     
