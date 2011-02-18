@@ -34,6 +34,8 @@ import rb
 import rhythmdb
 import gobject
 from time import time
+from __builtin__ import unicode
+from __builtin__ import str
 
 
 
@@ -86,6 +88,7 @@ class saveTAGRating(rb.Plugin):
         
         # TODO: rajouter une action plus évoluée pour la synchro bidirectionnelle ?
         # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
+
         
   
         
@@ -362,7 +365,8 @@ class saveTAGRating(rb.Plugin):
    
     
     def _save_db_to_vcomment(self, audio, rating, count):
-       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',rating,count)
+       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',unicode,
+                                  rating,count)
 
     
     def _save_db_to_mp4(self, pathSong, dbrating, dbcount):
@@ -370,11 +374,13 @@ class saveTAGRating(rb.Plugin):
         
         self._save_db_to_dict_tags(audio, 
                                    '----:com.apple.iTunes:FMPS_Rating',
-                                    '----:com.apple.iTunes:FMPS_Playcount',dbrating,dbcount)
+                                    '----:com.apple.iTunes:FMPS_Playcount',
+                                    str,
+                                    dbrating,dbcount)
     
     
      
-    def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,rating,count):
+    def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,encoding,rating,count):
         """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 
         that use dictionnary tags to save rating and playcount. 
         Only the identifier (dictionnary key) changes, so you need to provide them.
@@ -403,7 +409,7 @@ class saveTAGRating(rb.Plugin):
             # There is no existing rating tag
             if converted_dbrating > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio[rating_identifier] = [unicode(converted_dbrating)]
+                audio[rating_identifier] = [encoding(converted_dbrating)]
                 needsave = True
         else:
             # There is an existing rating tag, if the value has changed...
@@ -411,7 +417,7 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbrating > 0:
                     # Update the tag
-                    audio[rating_identifier] = [unicode(converted_dbrating)]
+                    audio[rating_identifier] = [encoding(converted_dbrating)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
                     del audio[rating_identifier]
@@ -422,7 +428,7 @@ class saveTAGRating(rb.Plugin):
             # There is no existing count tag
             if converted_dbcount > 0:
                 # Create one, only if the value we want to save is greater than 0
-                audio[playcount_identifier] = [unicode(converted_dbcount)]
+                audio[playcount_identifier] = [encoding(converted_dbcount)]
                 needsave = True
         else:
             # There is an existing count tag, if the value has changed...
@@ -430,7 +436,7 @@ class saveTAGRating(rb.Plugin):
                 # And if the value we want to save is greater than 0..
                 if converted_dbcount > 0:
                     # Update the tag
-                    audio[playcount_identifier] = [unicode(converted_dbcount)]
+                    audio[playcount_identifier] = [encoding(converted_dbcount)]
                 else:
                     # If the value we want to save is 0, remove the tag from the comment
                     del audio[playcount_identifier]
@@ -438,8 +444,9 @@ class saveTAGRating(rb.Plugin):
 
         if needsave:
             # save to file only if needed
-            audio.save()
             
+            audio.save()
+            print("save")
             num_saved += 1
         else:
             num_already_done += 1
