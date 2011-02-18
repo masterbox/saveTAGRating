@@ -25,6 +25,7 @@ from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
 from mutagen.mp4 import MP4
+from mutagen.musepack import Musepack
 from os import path
 import sys
 from urllib import url2pathname
@@ -34,8 +35,7 @@ import rb
 import rhythmdb
 import gobject
 from time import time
-from __builtin__ import unicode
-from __builtin__ import str
+
 
 
 
@@ -281,6 +281,8 @@ class saveTAGRating(rb.Plugin):
             return "flac"
         elif ext3 ==".mp4" or ext3==".m4a":
             return "mp4"
+        elif ext3==".mpc":
+            return "musepack"
         else:
             return None            
 
@@ -365,7 +367,8 @@ class saveTAGRating(rb.Plugin):
    
     
     def _save_db_to_vcomment(self, audio, rating, count):
-       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',unicode,
+       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
+                                  unicode,
                                   rating,count)
 
     
@@ -377,7 +380,12 @@ class saveTAGRating(rb.Plugin):
                                     '----:com.apple.iTunes:FMPS_Playcount',
                                     str,
                                     dbrating,dbcount)
-    
+        
+    def _save_db_to_musepack(self,pathSong,dbrating,dbcount):
+        audio=Musepack(pathSong)
+        self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
+                                  unicode,
+                                  rating,count)
     
      
     def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,encoding,rating,count):
@@ -388,9 +396,16 @@ class saveTAGRating(rb.Plugin):
         for vorbis comment, identifiers are 'FMPS_RATING' and 'FMPS_PLAYCOUNT'
         for mp4, identifiers are '----:com.apple.iTunes:FMPS_Rating' and  
         '----:com.apple.iTunes:FMPS_Playcount'
-        
         etc...
          See http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
+        
+        audio : the object representing the audio file 
+        rating_identifier : the key to access the rating value in the dictionnary
+        playcount_identifier : the key to access the playcount value in the dictionnary
+        encoding : builtin methods, unicode or str
+        rating : the rating to store (from the db)
+        count : the playcount to store (from the db)
+        
         """
         global num_saved, num_already_done
         # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
@@ -549,7 +564,12 @@ class saveTAGRating(rb.Plugin):
         return self._restore_db_from_dict_tags('----:com.apple.iTunes:FMPS_Rating', 
                                                '----:com.apple.iTunes:FMPS_Playcount', 
                                                audio)
-    
+
+    def _restore_db_from_musepack(self,pathSong):
+        audio=Musepack(pathSong)
+        return self._restoer_db_from_dict_tags('FMPS_RATING', 
+                                               'FMPS_PLAYCOUNT', 
+                                               audio)
     
     def _restore_db_from_dict_tags(self, rating_identifier,playcount_identifier,audio):
         """" Common code for _restore_db_from_vcomment  and _restore_db_from_mp4 
