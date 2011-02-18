@@ -36,7 +36,9 @@ import rhythmdb
 import gobject
 from time import time
 
-
+import gettext
+t = gettext.translation('messages', sys.path[0]+"/locale")
+_ = t.ugettext
 
 
 class saveTAGRating(rb.Plugin):
@@ -45,9 +47,12 @@ class saveTAGRating(rb.Plugin):
         rb.Plugin.__init__(self)
             
     def activate(self, shell):
+        
+        
         # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
         #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
         self.pluginrootpath = sys.path[0]+"/"
+        
         
         
         # Create stock id for icons (save,restore, clean)
@@ -127,7 +132,8 @@ class saveTAGRating(rb.Plugin):
             source = shell.get_property("selected_source")
         except TypeError:
             source = shell.get_property("selected_page")
-     
+            
+        
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -216,18 +222,14 @@ class saveTAGRating(rb.Plugin):
         totaltime = round(t1 - t0, 2)
         # Notification at the end of process
         pynotify.init('notify_user')
-        pynotify.Notification(_("Status"), _("%s saved \n" + 
-											  "%s restored \n" + 
-											  "%s failed \n" + 
-											  "%s already done \n" + 
-                                              "%s cleaned \n" + 
-											  "Took %s sec") % 
-											  (num_saved,
-											  num_restored,
-                                                num_failed,
-                                                num_already_done,
-                                                num_cleaned,
-                                                str(totaltime))).show()
+        pynotify.Notification(_("Status"),
+                              str(num_saved)+" "+_("saved")+"\n"+
+                              str(num_restored)+" "+_("restored")+"\n"+
+                              str(num_failed)+" "+_("failed")+"\n"+
+                              str(num_already_done)+" "+_("already done")+"\n"+
+                              str(num_cleaned)+" "+_("cleaned")+"\n"+
+                              _("Total time : ")+str(totaltime)+" s"
+                              ).show()
         return False
         
     
