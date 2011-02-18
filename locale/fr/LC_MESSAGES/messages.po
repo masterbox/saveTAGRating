@@ -1,0 +1,62 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: saveTAGRating Rhythmbox plugin\n"
+"POT-Creation-Date: 2011-02-18 18:05+CET\n"
+"PO-Revision-Date: 2011-02-18 18:08+0100\n"
+"Last-Translator: \n"
+"Language-Team: vysserk3 <vysserk3@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"X-Poedit-Language: French\n"
+"X-Poedit-Country: FRANCE\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: __init__.py:75
+#: __init__.py:76
+msgid "Save ratings and playcounts to files"
+msgstr "Sauvegarder le score et le nombre de lectures dans le fichier"
+
+#: __init__.py:81
+#: __init__.py:82
+msgid "Restore ratings and playcounts from files"
+msgstr "Restaurer le score et le nombre de lectures depuis le fichier audio"
+
+#: __init__.py:88
+#: __init__.py:89
+msgid "Remove rating/playcount tags of the selected files"
+msgstr "Supprimer tous les tags de scores et de nombre de lectures du fichier"
+
+#: __init__.py:224
+msgid "Status"
+msgstr "Etat"
+
+#: __init__.py:225
+msgid "saved"
+msgstr "sauvegardé(s)"
+
+#: __init__.py:226
+msgid "restored"
+msgstr "restauré(s)"
+
+#: __init__.py:227
+msgid "failed"
+msgstr "échoué(s)"
+
+#: __init__.py:228
+msgid "already done"
+msgstr "déjà traité(s)"
+
+#: __init__.py:229
+msgid "cleaned"
+msgstr "nettoyé(s)"
+
+#: __init__.py:230
+msgid "Total time : "
+msgstr "Temps total : "
+
