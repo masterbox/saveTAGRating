@@ -385,7 +385,7 @@ class saveTAGRating(rb.Plugin):
         audio=Musepack(pathSong)
         self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
                                   unicode,
-                                  rating,count)
+                                  dbrating,dbcount)
     
      
     def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,encoding,rating,count):
