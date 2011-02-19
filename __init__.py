@@ -121,9 +121,6 @@ class saveTAGRating(rb.Plugin):
         
         print("Plugin activated")
         
-
-
-
       
     def executedoActionOnSelected(self, action, doaction, shell):
         """ Function to apply doaction method on each element that has been selected """        
@@ -133,7 +130,6 @@ class saveTAGRating(rb.Plugin):
         except TypeError:
             source = shell.get_property("selected_page")
             
-        
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -505,7 +501,7 @@ class saveTAGRating(rb.Plugin):
             format = self._check_recognized_format(path_normalizado)
             
             if format is None:
-                raise Exception("Unrecognized format")
+                raise Exception("Unrecognized format for "+path_normalizado)
             else:
                 # Audio format is known, call the selector...
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
@@ -632,7 +628,7 @@ class saveTAGRating(rb.Plugin):
        
 
             if format is None:
-               raise Exception("Unrecognized format")
+               raise Exception("Unrecognized format for "+path_normalizado)
             
             else:
                 # Format is known, call the selector...
