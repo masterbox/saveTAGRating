@@ -459,10 +459,8 @@ class saveTAGRating(rb.Plugin):
                 needsave = True
 
         if needsave:
-            # save to file only if needed
-            
+            # save to file only if needed            
             audio.save()
-            print("save")
             num_saved += 1
         else:
             num_already_done += 1
@@ -706,6 +704,14 @@ class saveTAGRating(rb.Plugin):
                         needsave=True
                     if audio.has_key('----:com.apple.iTunes:FMPS_Playcount'):
                         del audio['----:com.apple.iTunes:FMPS_Playcount']
+                        needsave=True
+                elif format =="musepack":
+                    audio=Musepack(path_normalizado)
+                    if audio.has_key('FMPS_RATING'):
+                        del audio['FMPS_RATING']
+                        needsave=True
+                    if audio.has_key('FMPS_PLAYCOUNT'):
+                        del audio['FMPS_PLAYCOUNT']
                         needsave=True
 
                 if needsave:
