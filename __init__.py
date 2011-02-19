@@ -26,6 +26,8 @@ from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
 from mutagen.mp4 import MP4
 from mutagen.musepack import Musepack
+from mutagen.oggspeex import OggSpeex
+
 from os import path
 import sys
 from urllib import url2pathname
@@ -284,6 +286,8 @@ class saveTAGRating(rb.Plugin):
             return "mp4"
         elif ext3==".mpc":
             return "musepack"
+        elif ext3==".spx":
+            return "oggspeex"
         else:
             return None            
 
@@ -359,20 +363,20 @@ class saveTAGRating(rb.Plugin):
     def _save_db_to_oggvorbis(self, pathSong, dbrating, dbcount):
         audio = OggVorbis(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
-        pass
     
     def _save_db_to_flac(self, pathSong, dbrating, dbcount):
         audio = FLAC(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
-        pass
-   
+        
+    def _save_db_to_oggspeex(self,pathSong,dbrating,dbcount):
+        audio=OggSpeex(pathSong)
+        self._save_db_to_vcomment(audio, dbrating, dbcount)
     
     def _save_db_to_vcomment(self, audio, rating, count):
        self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
                                   unicode,
                                   rating,count)
 
-    
     def _save_db_to_mp4(self, pathSong, dbrating, dbcount):
         audio=MP4(pathSong)
         
@@ -388,6 +392,8 @@ class saveTAGRating(rb.Plugin):
                                   unicode,
                                   dbrating,dbcount)
     
+
+        
      
     def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,encoding,rating,count):
         """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 
@@ -506,7 +512,6 @@ class saveTAGRating(rb.Plugin):
             else:
                 # Audio format is known, call the selector...
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
-                print("save db to file done")        
         
         except Exception, e:
                 num_failed += 1
@@ -552,6 +557,9 @@ class saveTAGRating(rb.Plugin):
         audio = FLAC(pathSong)
         return self._restore_db_from_vcomment(audio)
     
+    def _restore_db_from_oggspeex(self,pathSong):
+        audio=OggSpeex(pathSong)
+        return self._restore_db_from_vcomment(audio)
     
     def _restore_db_from_vcomment(self, audio):
         return self._restore_db_from_dict_tags('FMPS_RATING', 
@@ -713,7 +721,16 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
                         needsave=True
-
+                        
+                elif format=="oggspeex":
+                    audio=OggSpeex(path_normalizado)
+                    if audio.has_key('FMPS_RATING'):
+                        del audio['FMPS_RATING']
+                        needsave=True
+                    if audio.has_key('FMPS_PLAYCOUNT'):
+                        del audio['FMPS_PLAYCOUNT']
+                        needsave=True
+                    
                 if needsave:
                     audio.save()
                     num_cleaned+=1
