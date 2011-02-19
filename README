@@ -14,11 +14,11 @@ Usage :
 - first backup ~/.local/share/rhythmbox/rhythmdb.xml and your audio files in case something goes wrong
 
 - To save rhythmbox database ratings and playcounts to files tag do :
-right click on a selection of files (mp3,ogg,oga,flac) > save ratings and counts to file
+right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4) > save ratings and counts to file
 (it will erase any previous stored ratings and playcounts tags)
 
 - To restore rhythmbox database ratings and playcounts from files tag do :
-right click on a selection of files (mp3,ogg,oga,flac) > restore ratings and counts from file
+right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4) > restore ratings and counts from file
 (it will erase rhythmbox database values unless the value from the file are 0)
 
 Git repo usage :
@@ -33,10 +33,9 @@ to ignore hidden files, backup files and .pyc files
 
 Todo :
 - FMPS_PLAYCOUNT for TXXX tag for mp3
-- Support APEv2
 - Progress bar during file processing
+- Use a Source to display errors (unrecognized format, missing header, etc..)
 - New entry to synchronize between rhythmbox database and files (in a smart way, for example always set max(filecount,dbcount) for the playcount tag)
-- internationalization
 
 
 
