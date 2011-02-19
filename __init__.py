@@ -198,9 +198,12 @@ class saveTAGRating(rb.Plugin):
         while iel < len(selected) and count < 10:
             element = selected[iel]
             uri = element.get_playback_uri()
-            dirpath = uri.rpartition('/')[0]
-            uri_normalizado = url2pathname(dirpath.replace("file://", ""))
-            path_normalizado = url2pathname(uri.replace("file://", ""))
+            
+            #dirpath = uri.rpartition('/')[0]
+            #uri_normalizado = url2pathname(dirpath.replace("file://", ""))
+            #path_normalizado = url2pathname(uri.replace("file://", ""))
+            path_normalizado = url2pathname(uri[7:])
+            
             # ...Execute the doaction function
             doaction(db, element, path_normalizado)
             count += 1
@@ -501,7 +504,7 @@ class saveTAGRating(rb.Plugin):
             format = self._check_recognized_format(path_normalizado)
             
             if format is None:
-                raise Exception("Unrecognized format for "+path_normalizado)
+                raise Exception("Unrecognized format")
             else:
                 # Audio format is known, call the selector...
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
@@ -509,7 +512,7 @@ class saveTAGRating(rb.Plugin):
         
         except Exception, e:
                 num_failed += 1
-                print(e)
+                print(e,path_normalizado)
         
 
 
@@ -628,7 +631,7 @@ class saveTAGRating(rb.Plugin):
        
 
             if format is None:
-               raise Exception("Unrecognized format for "+path_normalizado)
+               raise Exception("Unrecognized format")
             
             else:
                 # Format is known, call the selector...
@@ -653,7 +656,7 @@ class saveTAGRating(rb.Plugin):
         
         except Exception, e:
                 num_failed += 1
-                print(e)
+                print(e,path_normalizado)
 
 
     def cleanAllTags(self, db, element, path_normalizado):
@@ -713,10 +716,8 @@ class saveTAGRating(rb.Plugin):
     
         except Exception, e:
                 num_failed += 1
-                print(e)
-                
-        finally:
-            if audio: del audio
+                print(e, path_normalizado)
+
             
     def my_register_iconsets(icon_info):
       pass
