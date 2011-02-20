@@ -131,7 +131,17 @@ class saveTAGRating(rb.Plugin):
             source = shell.get_property("selected_source")
         except TypeError:
             source = shell.get_property("selected_page")
-            
+        
+        
+        
+        # Push a message in the statusbar during computation
+        player = shell.get_player()
+        global statusbar
+        statusbar=player.get_property("statusbar")
+        statusbar.push(1111,_("Processing..."))
+        
+        
+
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -187,6 +197,9 @@ class saveTAGRating(rb.Plugin):
         global num_cleaned, num_saved, num_failed, num_restored, num_already_done
         global iel
         global t0
+        global statusbar
+        
+        
         
         gtk.gdk.threads_enter()
         finished = False
@@ -197,7 +210,8 @@ class saveTAGRating(rb.Plugin):
         
         
         
-        while iel < len(selected) and count < 10:
+        while iel < len(selected) and count < 5:
+            
             element = selected[iel]
             uri = element.get_playback_uri()
             
@@ -217,10 +231,15 @@ class saveTAGRating(rb.Plugin):
 
 
         gtk.gdk.threads_leave()
-
+        # Computation is over....
+        
         # Compute the total processing time (in seconds)
         t1 = time()
         totaltime = round(t1 - t0, 2)
+        
+        # Clear the message from the statusbar
+        statusbar.pop(1111) 
+        
         # Notification at the end of process
         pynotify.init('notify_user')
         pynotify.Notification(_("Status"),
