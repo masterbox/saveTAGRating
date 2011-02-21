@@ -36,7 +36,7 @@ import pynotify
 import rb
 import rhythmdb
 import gobject
-from time import time
+from time import time,sleep
 
 import gettext
 t = gettext.translation('messages', sys.path[0]+"/locale")
@@ -137,11 +137,21 @@ class saveTAGRating(rb.Plugin):
         # Push a message in the statusbar during computation
         player = shell.get_player()
         global statusbar
+        global progressbar
         statusbar=player.get_property("statusbar")
+        
+        # Is there a better way to get access to it ???
+        progressbar=statusbar.get_children()[1]
         statusbar.push(1111,_("Processing..."))
         
+        # Initiate progress bar at 0
+        progressbar.set_fraction(0.0)
         
-
+        # remove text if there is
+        progressbar.set_text("")
+        
+        # Show the progress bar
+        progressbar.set_visible(1)
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -197,7 +207,7 @@ class saveTAGRating(rb.Plugin):
         global num_cleaned, num_saved, num_failed, num_restored, num_already_done
         global iel
         global t0
-        global statusbar
+        global statusbar, progressbar
         
         
         
@@ -211,10 +221,11 @@ class saveTAGRating(rb.Plugin):
         
         
         while iel < len(selected) and count < 5:
-            
             element = selected[iel]
             uri = element.get_playback_uri()
             
+            # Update progress bar advancement, for the moment, only updated every 5 songs due to count...
+            progressbar.set_fraction(float(iel)/float(len(selected)))
             #dirpath = uri.rpartition('/')[0]
             #uri_normalizado = url2pathname(dirpath.replace("file://", ""))
             #path_normalizado = url2pathname(uri.replace("file://", ""))
@@ -238,8 +249,12 @@ class saveTAGRating(rb.Plugin):
         totaltime = round(t1 - t0, 2)
         
         # Clear the message from the statusbar
-        statusbar.pop(1111) 
+        #statusbar.pop(1111) 
         
+        # remove progress bar and reset it to 0
+        progressbar.set_visible(0)
+        progressbar.set_fraction(0.0)
+
         # Notification at the end of process
         pynotify.init('notify_user')
         pynotify.Notification(_("Status"),
