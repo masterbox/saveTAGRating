@@ -118,6 +118,14 @@ class saveTAGRating(rb.Plugin):
         
         # Load the ui structure from the xml file
         self.ui_id = self.uim.add_ui_from_file(self.pluginrootpath + "saveratings_ui.xml")
+        
+        ## Setup statusbar and progressbar
+        player = shell.get_player()
+        self.statusbar=player.get_property("statusbar")
+        # Is there a better way to get access to it ???
+        self.progressbar=self.statusbar.get_children()[1]
+        
+        
         # Refresh user interface
         self.uim.ensure_update()
         
@@ -132,26 +140,17 @@ class saveTAGRating(rb.Plugin):
         except TypeError:
             source = shell.get_property("selected_page")
         
-        
-        
-        # Push a message in the statusbar during computation
-        player = shell.get_player()
-        global statusbar
-        global progressbar
-        statusbar=player.get_property("statusbar")
-        
-        # Is there a better way to get access to it ???
-        progressbar=statusbar.get_children()[1]
-        statusbar.push(1111,_("Processing..."))
+        # Push a message in the statusbar
+        self.statusbar.push(1111,_("Processing..."))
         
         # Initiate progress bar at 0
-        progressbar.set_fraction(0.0)
+        self.progressbar.set_fraction(0.0)
         
         # remove text if there is
-        progressbar.set_text("")
+        self.progressbar.set_text("")
         
         # Show the progress bar
-        progressbar.set_visible(1)
+        self.progressbar.set_visible(1)
         # Get an EntryView for the selected source (the track list)
         entryview = source.get_entry_view()
         # Get the list of selected entries from the track list
@@ -207,7 +206,6 @@ class saveTAGRating(rb.Plugin):
         global num_cleaned, num_saved, num_failed, num_restored, num_already_done
         global iel
         global t0
-        global statusbar, progressbar
         
         
         
@@ -218,14 +216,15 @@ class saveTAGRating(rb.Plugin):
         # maximum value to be properly defined (if N=size of the collection > N/2, N/3, N/4, N ????)
         count = 0
         
+        # Selected elements list size
+        selected_size=float(len(selected))
         
-        
-        while iel < len(selected) and count < 5:
+        while iel < selected_size and count < 5:
             element = selected[iel]
             uri = element.get_playback_uri()
             
             # Update progress bar advancement, for the moment, only updated every 5 songs due to count...
-            progressbar.set_fraction(float(iel)/float(len(selected)))
+            self.progressbar.set_fraction(iel/selected_size)
             #dirpath = uri.rpartition('/')[0]
             #uri_normalizado = url2pathname(dirpath.replace("file://", ""))
             #path_normalizado = url2pathname(uri.replace("file://", ""))
@@ -236,7 +235,7 @@ class saveTAGRating(rb.Plugin):
             count += 1
             iel += 1
             
-        if iel < len(selected):
+        if iel < selected_size:
             gtk.gdk.threads_leave()
             return True
 
@@ -249,11 +248,11 @@ class saveTAGRating(rb.Plugin):
         totaltime = round(t1 - t0, 2)
         
         # Clear the message from the statusbar
-        #statusbar.pop(1111) 
+        self.statusbar.pop(1111) 
         
         # remove progress bar and reset it to 0
-        progressbar.set_visible(0)
-        progressbar.set_fraction(0.0)
+        self.progressbar.set_visible(0)
+        self.progressbar.set_fraction(0.0)
 
         # Notification at the end of process
         pynotify.init('notify_user')
