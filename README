@@ -33,7 +33,6 @@ to ignore hidden files, backup files and .pyc files
 
 Todo :
 - FMPS_PLAYCOUNT for TXXX tag for mp3
-- Progress bar during file processing
 - Use a Source to display errors (unrecognized format, missing header, etc..)
 - New entry to synchronize between rhythmbox database and files (in a smart way, for example always set max(filecount,dbcount) for the playcount tag)
 
