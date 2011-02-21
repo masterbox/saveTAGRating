@@ -775,10 +775,6 @@ class saveTAGRating(rb.Plugin):
                 print(e, path_normalizado)
 
             
-    def my_register_iconsets(icon_info):
-      pass
-      
-            
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
         self.uim.remove_ui (self.ui_id)
