@@ -347,14 +347,14 @@ class saveTAGRating(rb.Plugin):
             popmlist = audio.getall('POPM')
             if popmlist == []:
                 # No existing tag POPM has been found, so create one...
-                audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
+                audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
                 needsave = True
             else:
                 # An existing tag POPM has been found, let's check if the rating has changed
                 if self._convert_ID3v2_rating_to_rhythmbdb_rating(popmlist[0].rating) != dbrating:
                     # If it has, erase the value of the file an replace it with the db value (converted)
                     audio.delall('POPM')
-                    audio.add(POPM(email=u'banshee', rating=int(51 * dbrating)))
+                    audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
                     needsave = True
             fmpslist = audio.getall(u'TXXX:FMPS_Rating')
             if fmpslist == []:
