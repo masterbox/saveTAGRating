@@ -790,4 +790,6 @@ class saveTAGRating(rb.Plugin):
         del self.action2
         del self.action3
         del self.pluginrootpath
+        del self.statusbar
+        del self.progressbar
         print("Plugin deactivated")
