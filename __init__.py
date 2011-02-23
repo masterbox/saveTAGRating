@@ -125,6 +125,12 @@ class saveTAGRating(rb.Plugin):
         # Is there a better way to get access to it ???
         self.progressbar=self.statusbar.get_children()[1]
         
+        # Store a reference to the db
+        self.db=shell.props.db
+        
+        # Each time an entry is changed, call the given method
+        #TODO: only if enabled in gconf :
+        self.db.connect('entry-changed', self._on_entry_change)
         
         # Refresh user interface
         self.uim.ensure_update()
@@ -160,25 +166,6 @@ class saveTAGRating(rb.Plugin):
         global num_saved, num_failed, num_restored, num_already_done, num_cleaned
         num_saved, num_failed, num_restored, num_already_done, num_cleaned = 0, 0, 0, 0, 0
         
-                
-        # Get the  RhythmDBTree from the shell to do some 
-        # high level queries and updates
-        db = shell.props.db
-        
-        
-        
-        ########### TO REMOVE ############################
-        # Code before using gtk threads
-        # For each element of the selection...
-        #        for element in selected:
-        #            uri = element.get_playback_uri()
-        #            dirpath = uri.rpartition('/')[0]
-        #            uri_normalizado = url2pathname(dirpath.replace("file://", ""))
-        #            path_normalizado = url2pathname(uri.replace("file://", ""))
-        #            # ...Execute the doaction function
-        #            doaction(db, element, path_normalizado)
-        #####################################################
-        
         # Global variable to store the index of the current selected element
         # iel is set to 0 and will be increased during the loop of the idle callback 
         global iel
@@ -190,7 +177,7 @@ class saveTAGRating(rb.Plugin):
 
         gobject.idle_add(self.idle_cb_loop_on_selected, # name of the callback  
                         selected, # additionnal parameters
-                        db, #  --
+                        self.db, #  --
                         doaction, # --
                         # named parameter to set an idle priority (background)
                         priority=gobject.PRIORITY_LOW) 
@@ -774,6 +761,13 @@ class saveTAGRating(rb.Plugin):
                 num_failed += 1
                 print(e, path_normalizado)
 
+    
+    def _on_entry_change(self,db,entry,changes):
+         print(url2pathname(entry.get_playback_uri()[7:]))
+         # Uncomment next line to enable rating/playcount autosave
+         #self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
+        
+            
             
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
