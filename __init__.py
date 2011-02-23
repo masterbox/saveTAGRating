@@ -130,7 +130,7 @@ class saveTAGRating(rb.Plugin):
         
         # Each time an entry is changed, call the given method
         #TODO: only if enabled in gconf :
-        self.db.connect('entry-changed', self._on_entry_change)
+        self.entrychanged_sig_id=self.db.connect('entry-changed', self._on_entry_change)
         
         # Refresh user interface
         self.uim.ensure_update()
@@ -782,4 +782,7 @@ class saveTAGRating(rb.Plugin):
         del self.pluginrootpath
         del self.statusbar
         del self.progressbar
+        self.db.disconnect(self.entrychanged_sig_id)
+        del self.entrychanged_sig_id
+        del self.db
         print("Plugin deactivated")
