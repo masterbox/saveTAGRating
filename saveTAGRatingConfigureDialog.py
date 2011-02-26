@@ -24,11 +24,12 @@
 import gtk
 import gconf
 
-class saveTAGRatingConfigureDialog (object):
-	def __init__(self, builder_file, gconf_keys):
+class saveTAGRatingConfigureDialog:
+	def __init__(self, builder_file, gconf_keys,rbplugin):
 		self.gconf = gconf.client_get_default()
 		self.gconf_keys = gconf_keys
-
+		self.rbplugin=rbplugin
+		
 		builder = gtk.Builder()
 		builder.add_from_file(builder_file)
 		
@@ -56,6 +57,11 @@ class saveTAGRatingConfigureDialog (object):
 
 	def dialog_response(self, dialog, response):
 		if response == gtk.RESPONSE_OK:
+			if self.gconf.get_bool(self.gconf_keys['autosaveenabled']):
+				self.rbplugin.entrychanged_sig_id = self.rbplugin.db.connect('entry-changed', self.rbplugin._on_entry_change)
+			else:
+				self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
+				
 			self.dialog.hide()
 		elif response == gtk.RESPONSE_CANCEL or response == gtk.RESPONSE_DELETE_EVENT:
 			# Restore previous booleans
