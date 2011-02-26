@@ -21,51 +21,62 @@
 # Specs for tagging file : 
 # http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
 
-from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.flac import FLAC
-from mutagen.oggvorbis import OggVorbis
+from mutagen.id3 import ID3, POPM, PCNT, TXXX
 from mutagen.mp4 import MP4
 from mutagen.musepack import Musepack
 from mutagen.oggspeex import OggSpeex
-
+from mutagen.oggvorbis import OggVorbis
 from os import path
-import sys
+from saveTAGRatingConfigureDialog import saveTAGRatingConfigureDialog
+from time import time, sleep
 from urllib import url2pathname
+import gconf
+import gettext
+import gobject
 import gtk
 import pynotify
 import rb
 import rhythmdb
-import gobject
-from time import time,sleep
+import sys
 
-import gettext
-t = gettext.translation('messages', sys.path[0]+"/locale")
+
+t = gettext.translation('messages', sys.path[0] + "/locale")
 _ = t.ugettext
+
+
+
+# Some gconf keys to store user settings...
+# TODO: implement 'ratingsenabled' and 'playcountsenabled'
+gconf_keys = {'autosaveenabled' : '/apps/rhythmbox/plugins/saveTAGRating/autosave_enabled'
+              , 'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
+              , 'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
+              }
 
 
 class saveTAGRating(rb.Plugin):
 
     def __init__(self):
         rb.Plugin.__init__(self)
-            
-    def activate(self, shell):
         
+
+    def activate(self, shell):
+        # Get the gconf boolean value for "autosave" feature
+        self.autosaveenabled = gconf.client_get_default().get_bool(gconf_keys['autosaveenabled'])
         
         # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
         #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
-        self.pluginrootpath = sys.path[0]+"/"
-        
-        
+        self.pluginrootpath = sys.path[0] + "/"
         
         # Create stock id for icons (save,restore, clean)
         iconfactory = gtk.IconFactory()
         stock_ids = gtk.stock_list_ids()
         for stock_id, file in [('save_rating_playcount', 'save.png'),
                                ('restore_rating_playcount', 'restore.png'),
-                               ('clean_alltags','clean.png')]:
+                               ('clean_alltags', 'clean.png')]:
             # only load image files when our stock_id is not present
             if stock_id not in stock_ids:
-              pixbuf = gtk.gdk.pixbuf_new_from_file(self.pluginrootpath+file)
+              pixbuf = gtk.gdk.pixbuf_new_from_file(self.pluginrootpath + file)
               iconset = gtk.IconSet(pixbuf)
               iconfactory.add(stock_id, iconset)
         iconfactory.add_default()
@@ -117,27 +128,75 @@ class saveTAGRating(rb.Plugin):
         self.uim.insert_action_group(self.action_group, 0)
         
         # Load the ui structure from the xml file
-        self.ui_id = self.uim.add_ui_from_file(self.pluginrootpath + "saveratings_ui.xml")
+        self.ui_id = self.uim.add_ui_from_file(self.find_file("saveratings_ui.xml"))
         
         ## Setup statusbar and progressbar
         player = shell.get_player()
-        self.statusbar=player.get_property("statusbar")
+        self.statusbar = player.get_property("statusbar")
         # Is there a better way to get access to it ???
-        self.progressbar=self.statusbar.get_children()[1]
+        self.progressbar = self.statusbar.get_children()[1]
         
         # Store a reference to the db
-        self.db=shell.props.db
+        self.db = shell.props.db
         
         # Each time an entry is changed, call the given method
-        #TODO: only if enabled in gconf :
-        self.entrychanged_sig_id=self.db.connect('entry-changed', self._on_entry_change)
+        if self.autosaveenabled:
+            self.entrychanged_sig_id = self.db.connect('entry-changed', self._on_entry_change)
+
+        # Variable to store processing stats
+        self.num_saved = 0
+        self.num_failed = 0
+        self.num_restored = 0
+        self.num_already_done = 0
+        self.num_cleaned = 0
+        
+        # Index of the current selected item
+        self.iel = 0
+        
+        # Start time
+        self.t0 = 0
         
         # Refresh user interface
         self.uim.ensure_update()
-        
         print("Plugin activated")
         
-      
+
+    def create_configure_dialog(self, dialog=None):
+        if not dialog:
+            builder_file = self.find_file("savetagrating-prefs.ui")
+            dialog = saveTAGRatingConfigureDialog(builder_file, gconf_keys,self).get_dialog()
+        dialog.present()
+        
+        return dialog
+    
+            
+    def deactivate(self, shell):
+        """ Dereference any fields that has been initialized in activate"""
+        self.uim.remove_ui (self.ui_id)
+        del self.ui_id
+        self.uim.remove_action_group (self.action_group)
+        del self.uim
+        del self.action_group
+        del self.action
+        del self.action2
+        del self.action3
+        del self.pluginrootpath
+        del self.statusbar
+        del self.progressbar
+        del self.num_saved
+        del self.num_failed
+        del self.num_restored
+        del self.num_already_done
+        del self.num_cleaned
+        del self.iel
+        del self.t0
+        if self.autosaveenabled:
+            self.db.disconnect(self.entrychanged_sig_id)
+            del self.entrychanged_sig_id
+        del self.db
+        print("Plugin deactivated")
+
+
     def executedoActionOnSelected(self, action, doaction, shell):
         """ Function to apply doaction method on each element that has been selected """        
         # Get a rb.Source instance of the selected page
@@ -147,7 +206,7 @@ class saveTAGRating(rb.Plugin):
             source = shell.get_property("selected_page")
         
         # Push a message in the statusbar
-        self.statusbar.push(1111,_("Processing..."))
+        self.statusbar.push(1111, _("Processing..."))
         
         # Initiate progress bar at 0
         self.progressbar.set_fraction(0.0)
@@ -162,18 +221,22 @@ class saveTAGRating(rb.Plugin):
         # Get the list of selected entries from the track list
         selected = entryview.get_selected_entries()
         
-        # Global variables to store statistics
-        global num_saved, num_failed, num_restored, num_already_done, num_cleaned
-        num_saved, num_failed, num_restored, num_already_done, num_cleaned = 0, 0, 0, 0, 0
+        # Variables to store statistics
+        #global num_saved, num_failed, num_restored, num_already_done, num_cleaned
+        self.num_saved = 0
+        self.num_failed = 0
+        self.num_restored = 0 
+        self.num_already_done = 0
+        self.num_cleaned = 0
         
-        # Global variable to store the index of the current selected element
+        # Variable to store the index of the current selected element
         # iel is set to 0 and will be increased during the loop of the idle callback 
-        global iel
-        iel = 0
+        #global iel
+        self.iel = 0
         
         # Store the start time before we start a long computation
-        global t0
-        t0 = time()
+        #global t0
+        self.t0 = time()
 
         gobject.idle_add(self.idle_cb_loop_on_selected, # name of the callback  
                         selected, # additionnal parameters
@@ -190,9 +253,9 @@ class saveTAGRating(rb.Plugin):
         """ Use chunked idle callbacks to perform IO operation in an asynchronous way
         See http://live.gnome.org/RhythmboxPlugins/WritingGuide#Using_idle_callbacks_for_repeated_tasks
         """
-        global num_cleaned, num_saved, num_failed, num_restored, num_already_done
-        global iel
-        global t0
+#        global num_cleaned, num_saved, num_failed, num_restored, num_already_done
+#        global iel
+#        global t0
         
         
         
@@ -204,14 +267,14 @@ class saveTAGRating(rb.Plugin):
         count = 0
         
         # Selected elements list size
-        selected_size=float(len(selected))
+        selected_size = float(len(selected))
         
-        while iel < selected_size and count < 5:
-            element = selected[iel]
+        while self.iel < selected_size and count < 5:
+            element = selected[self.iel]
             uri = element.get_playback_uri()
             
             # Update progress bar advancement, for the moment, only updated every 5 songs due to count...
-            self.progressbar.set_fraction(iel/selected_size)
+            self.progressbar.set_fraction(self.iel / selected_size)
             #dirpath = uri.rpartition('/')[0]
             #uri_normalizado = url2pathname(dirpath.replace("file://", ""))
             #path_normalizado = url2pathname(uri.replace("file://", ""))
@@ -220,9 +283,9 @@ class saveTAGRating(rb.Plugin):
             # ...Execute the doaction function
             doaction(db, element, path_normalizado)
             count += 1
-            iel += 1
+            self.iel += 1
             
-        if iel < selected_size:
+        if self.iel < selected_size:
             gtk.gdk.threads_leave()
             return True
 
@@ -232,7 +295,7 @@ class saveTAGRating(rb.Plugin):
         
         # Compute the total processing time (in seconds)
         t1 = time()
-        totaltime = round(t1 - t0, 2)
+        totaltime = round(t1 - self.t0, 2)
         
         # Clear the message from the statusbar
         self.statusbar.pop(1111) 
@@ -244,12 +307,12 @@ class saveTAGRating(rb.Plugin):
         # Notification at the end of process
         pynotify.init('notify_user')
         pynotify.Notification(_("Status"),
-                              str(num_saved)+" "+_("saved")+"\n"+
-                              str(num_restored)+" "+_("restored")+"\n"+
-                              str(num_failed)+" "+_("failed")+"\n"+
-                              str(num_already_done)+" "+_("already done")+"\n"+
-                              str(num_cleaned)+" "+_("cleaned")+"\n"+
-                              _("Total time : ")+str(totaltime)+" s"
+                              str(self.num_saved) + " " + _("saved") + "\n" + 
+                              str(self.num_restored) + " " + _("restored") + "\n" + 
+                              str(self.num_failed) + " " + _("failed") + "\n" + 
+                              str(self.num_already_done) + " " + _("already done") + "\n" + 
+                              str(self.num_cleaned) + " " + _("cleaned") + "\n" + 
+                              _("Total time : ") + str(totaltime) + " s"
                               ).show()
         return False
         
@@ -302,11 +365,11 @@ class saveTAGRating(rb.Plugin):
             return "oggvorbis"
         elif ext4 == ".flac":
             return "flac"
-        elif ext3 ==".mp4" or ext3==".m4a":
+        elif ext3 == ".mp4" or ext3 == ".m4a":
             return "mp4"
-        elif ext3==".mpc":
+        elif ext3 == ".mpc":
             return "musepack"
-        elif ext3==".spx":
+        elif ext3 == ".spx":
             return "oggspeex"
         else:
             return None            
@@ -320,7 +383,7 @@ class saveTAGRating(rb.Plugin):
         POPM stand for Popularimeter
         PCNT stand for Play Counter 
         """
-        global num_saved, num_already_done
+        #global num_saved, num_already_done
 
         audio = ID3(pathSong)
         # Instead of having two I/O operations each time, 
@@ -353,7 +416,6 @@ class saveTAGRating(rb.Plugin):
                 if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
                     # If it has, erase the value of the file an replace it with the db value (converted)
                     audio.delall(u'TXXX:FMPS_Rating')
-                    print dbrating
                     audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
                     needsave = True            
             
@@ -373,9 +435,9 @@ class saveTAGRating(rb.Plugin):
         if needsave:
             # save to file only if needed
             audio.save()
-            num_saved += 1
+            self.num_saved += 1
         else:
-            num_already_done += 1
+            self.num_already_done += 1
 
 
 
@@ -388,34 +450,34 @@ class saveTAGRating(rb.Plugin):
         audio = FLAC(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
         
-    def _save_db_to_oggspeex(self,pathSong,dbrating,dbcount):
-        audio=OggSpeex(pathSong)
+    def _save_db_to_oggspeex(self, pathSong, dbrating, dbcount):
+        audio = OggSpeex(pathSong)
         self._save_db_to_vcomment(audio, dbrating, dbcount)
     
     def _save_db_to_vcomment(self, audio, rating, count):
-       self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
+       self._save_db_to_dict_tags(audio, 'FMPS_RATING', 'FMPS_PLAYCOUNT',
                                   unicode,
-                                  rating,count)
+                                  rating, count)
 
     def _save_db_to_mp4(self, pathSong, dbrating, dbcount):
-        audio=MP4(pathSong)
+        audio = MP4(pathSong)
         
-        self._save_db_to_dict_tags(audio, 
+        self._save_db_to_dict_tags(audio,
                                    '----:com.apple.iTunes:FMPS_Rating',
                                     '----:com.apple.iTunes:FMPS_Playcount',
                                     str,
-                                    dbrating,dbcount)
+                                    dbrating, dbcount)
         
-    def _save_db_to_musepack(self,pathSong,dbrating,dbcount):
-        audio=Musepack(pathSong)
-        self._save_db_to_dict_tags(audio,'FMPS_RATING','FMPS_PLAYCOUNT',
+    def _save_db_to_musepack(self, pathSong, dbrating, dbcount):
+        audio = Musepack(pathSong)
+        self._save_db_to_dict_tags(audio, 'FMPS_RATING', 'FMPS_PLAYCOUNT',
                                   unicode,
-                                  dbrating,dbcount)
+                                  dbrating, dbcount)
     
 
         
      
-    def _save_db_to_dict_tags(self,audio,rating_identifier,playcount_identifier,encoding,rating,count):
+    def _save_db_to_dict_tags(self, audio, rating_identifier, playcount_identifier, encoding, rating, count):
         """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 
         that use dictionnary tags to save rating and playcount. 
         Only the identifier (dictionnary key) changes, so you need to provide them.
@@ -434,7 +496,7 @@ class saveTAGRating(rb.Plugin):
         count : the playcount to store (from the db)
         
         """
-        global num_saved, num_already_done
+        #global num_saved, num_already_done
         # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
         converted_dbrating = 0.2 * rating
         # Convert the count from the db (integer) to a float 
@@ -487,9 +549,9 @@ class saveTAGRating(rb.Plugin):
         if needsave:
             # save to file only if needed            
             audio.save()
-            num_saved += 1
+            self.num_saved += 1
         else:
-            num_already_done += 1
+            self.num_already_done += 1
     
 
     def _save_db_to(self, pathSong, dbrating, dbcount, format):
@@ -516,7 +578,7 @@ class saveTAGRating(rb.Plugin):
         - Should be audio format agnostic 
         
         """
-        global num_saved, num_failed
+        #global num_saved, num_failed
         try:
             # Get the dbrating value (float) of the RhythmboxDB element 
             dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
@@ -534,8 +596,8 @@ class saveTAGRating(rb.Plugin):
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
         
         except Exception, e:
-                num_failed += 1
-                print(e,path_normalizado)
+                self.num_failed += 1
+                print(e, path_normalizado)
         
 
 
@@ -577,28 +639,28 @@ class saveTAGRating(rb.Plugin):
         audio = FLAC(pathSong)
         return self._restore_db_from_vcomment(audio)
     
-    def _restore_db_from_oggspeex(self,pathSong):
-        audio=OggSpeex(pathSong)
+    def _restore_db_from_oggspeex(self, pathSong):
+        audio = OggSpeex(pathSong)
         return self._restore_db_from_vcomment(audio)
     
     def _restore_db_from_vcomment(self, audio):
-        return self._restore_db_from_dict_tags('FMPS_RATING', 
-                                               'FMPS_PLAYCOUNT', 
+        return self._restore_db_from_dict_tags('FMPS_RATING',
+                                               'FMPS_PLAYCOUNT',
                                                audio)
         
-    def _restore_db_from_mp4(self,pathSong):
-        audio=MP4(pathSong)
-        return self._restore_db_from_dict_tags('----:com.apple.iTunes:FMPS_Rating', 
-                                               '----:com.apple.iTunes:FMPS_Playcount', 
+    def _restore_db_from_mp4(self, pathSong):
+        audio = MP4(pathSong)
+        return self._restore_db_from_dict_tags('----:com.apple.iTunes:FMPS_Rating',
+                                               '----:com.apple.iTunes:FMPS_Playcount',
                                                audio)
 
-    def _restore_db_from_musepack(self,pathSong):
-        audio=Musepack(pathSong)
-        return self._restore_db_from_dict_tags('FMPS_RATING', 
-                                               'FMPS_PLAYCOUNT', 
+    def _restore_db_from_musepack(self, pathSong):
+        audio = Musepack(pathSong)
+        return self._restore_db_from_dict_tags('FMPS_RATING',
+                                               'FMPS_PLAYCOUNT',
                                                audio)
     
-    def _restore_db_from_dict_tags(self, rating_identifier,playcount_identifier,audio):
+    def _restore_db_from_dict_tags(self, rating_identifier, playcount_identifier, audio):
         """" Common code for _restore_db_from_vcomment  and _restore_db_from_mp4 
         that use dictionnary tags to save rating and playcount. 
         Only the identifier (dictionnary key) changes, so you need to provide them.
@@ -649,7 +711,7 @@ class saveTAGRating(rb.Plugin):
         - Restore ratings and playcounts from file to Rhythmbox db
         - Should be audio format agnostic
         """
-        global num_restored, num_failed, num_already_done
+        #global num_restored, num_failed, num_already_done
        
         try: 
             # Get the audio tagging format of the current element
@@ -676,17 +738,17 @@ class saveTAGRating(rb.Plugin):
                 
                 if needcommit:
                     db.commit()
-                    num_restored += 1
+                    self.num_restored += 1
                 else:
-                    num_already_done += 1
+                    self.num_already_done += 1
         
         except Exception, e:
-                num_failed += 1
-                print(e,path_normalizado)
+                self.num_failed += 1
+                print(e, path_normalizado)
 
 
     def cleanAllTags(self, db, element, path_normalizado):
-        global num_cleaned, num_failed,num_already_done
+        #global num_cleaned, num_failed,num_already_done
         try: 
             # Get the audio tagging format of the current element
             format = self._check_recognized_format(path_normalizado)
@@ -695,94 +757,78 @@ class saveTAGRating(rb.Plugin):
             
             else:
                 
-                needsave=False
+                needsave = False
                 if format == "id3v2":
                     audio = ID3(path_normalizado)
                     if audio.has_key('POPM'):
                         audio.delall('POPM')
-                        needsave=True
+                        needsave = True
                     if audio.has_key('PCNT'):
                         audio.delall('PCNT')
-                        needsave=True
+                        needsave = True
                     if audio.has_key(u'TXXX:FMPS_Rating'):
                         audio.delall(u'TXXX:FMPS_Rating')
-                        needsave=True
+                        needsave = True
                     
                     
                 elif format == "oggvorbis":
                     audio = OggVorbis(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
-                        needsave=True
+                        needsave = True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
-                        needsave=True
+                        needsave = True
                 elif format == "flac":
                     audio = FLAC(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
-                        needsave=True
+                        needsave = True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
-                        needsave=True
-                elif format =="mp4":
+                        needsave = True
+                elif format == "mp4":
                     audio = MP4(path_normalizado)
                     if audio.has_key('----:com.apple.iTunes:FMPS_Rating'):
                         del audio['----:com.apple.iTunes:FMPS_Rating']
-                        needsave=True
+                        needsave = True
                     if audio.has_key('----:com.apple.iTunes:FMPS_Playcount'):
                         del audio['----:com.apple.iTunes:FMPS_Playcount']
-                        needsave=True
-                elif format =="musepack":
-                    audio=Musepack(path_normalizado)
+                        needsave = True
+                elif format == "musepack":
+                    audio = Musepack(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
-                        needsave=True
+                        needsave = True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
-                        needsave=True
+                        needsave = True
                         
-                elif format=="oggspeex":
-                    audio=OggSpeex(path_normalizado)
+                elif format == "oggspeex":
+                    audio = OggSpeex(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
                         del audio['FMPS_RATING']
-                        needsave=True
+                        needsave = True
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
-                        needsave=True
+                        needsave = True
                     
                 if needsave:
                     audio.save()
-                    num_cleaned+=1
+                    self.num_cleaned += 1
                 else:
-                    num_already_done+=1
+                    self.num_already_done += 1
     
         except Exception, e:
-                num_failed += 1
+                self.num_failed += 1
                 print(e, path_normalizado)
 
     
-    def _on_entry_change(self,db,entry,changes):
-         print(url2pathname(entry.get_playback_uri()[7:]))
-         # Uncomment next line to enable rating/playcount autosave
-         #self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
+    def _on_entry_change(self, db, entry, changes):
+         if changes[0].prop == rhythmdb.PROP_RATING or changes[0].prop == rhythmdb.PROP_PLAY_COUNT:
+             self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
+             print("autosave done")
+       
         
             
-            
-    def deactivate(self, shell):
-        """ Dereference any fields that has been initialized in activate"""
-        self.uim.remove_ui (self.ui_id)
-        del self.ui_id
-        self.uim.remove_action_group (self.action_group)
-        del self.uim
-        del self.action_group
-        del self.action
-        del self.action2
-        del self.action3
-        del self.pluginrootpath
-        del self.statusbar
-        del self.progressbar
-        self.db.disconnect(self.entrychanged_sig_id)
-        del self.entrychanged_sig_id
-        del self.db
-        print("Plugin deactivated")
+
