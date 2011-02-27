@@ -61,7 +61,11 @@ class saveTAGRatingConfigureDialog:
 				self.rbplugin.entrychanged_sig_id = self.rbplugin.db.connect('entry-changed', self.rbplugin._on_entry_change)
 			else:
 				self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
-				
+			
+			self.rbplugin.ratingsenabled=self.gconf.get_bool(self.gconf_keys['ratingsenabled'])		
+			self.rbplugin.playcountsenabled=self.gconf.get_bool(self.gconf_keys['playcountsenabled'])
+			self.rbplugin.setup_gtkactions(self.rbplugin.shell)
+			
 			self.dialog.hide()
 		elif response == gtk.RESPONSE_CANCEL or response == gtk.RESPONSE_DELETE_EVENT:
 			# Restore previous booleans
@@ -85,6 +89,7 @@ class saveTAGRatingConfigureDialog:
 	def ratingstoggle_callback(self,widget):
 		# Change the gconf value whenever the checkbox is changed
 		self.gconf.set_bool(self.gconf_keys['ratingsenabled'],widget.get_active())
+		
 	
 	def playcountstoggle_callback(self,widget):
 		# Change the gconf value whenever the checkbox is changed

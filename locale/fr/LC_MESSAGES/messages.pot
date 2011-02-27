@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-02-20 10:46+CET\n"
+"POT-Creation-Date: 2011-02-27 18:03+CET\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,47 +15,71 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: ../../../__init__.py:78 ../../../__init__.py:79
-msgid "Save ratings and playcounts to files"
+#: ./__init__.py:163
+msgid "Save rating and playcount to file"
 msgstr ""
 
-#: ../../../__init__.py:84 ../../../__init__.py:85
-msgid "Restore ratings and playcounts from files"
+#: ./__init__.py:164
+msgid "Restore rating and playcount from file"
 msgstr ""
 
-#: ../../../__init__.py:91 ../../../__init__.py:92
-msgid "Remove rating/playcount tags of the selected files"
+#: ./__init__.py:165
+msgid "Remove rating and playcount tags"
 msgstr ""
 
-#: ../../../__init__.py:141
+#: ./__init__.py:168
+msgid "Save rating to file"
+msgstr ""
+
+#: ./__init__.py:169
+msgid "Restore rating from file"
+msgstr ""
+
+#: ./__init__.py:170
+msgid "Remove rating tag"
+msgstr ""
+
+#: ./__init__.py:172
+msgid "Save playcount to file"
+msgstr ""
+
+#: ./__init__.py:173
+msgid "Restore playcount from file"
+msgstr ""
+
+#: ./__init__.py:174
+msgid "Remove playcount tag"
+msgstr ""
+
+#: ./__init__.py:234
 msgid "Processing..."
 msgstr ""
 
-#: ../../../__init__.py:245
+#: ./__init__.py:334
 msgid "Status"
 msgstr ""
 
-#: ../../../__init__.py:246
+#: ./__init__.py:335
 msgid "saved"
 msgstr ""
 
-#: ../../../__init__.py:247
+#: ./__init__.py:336
 msgid "restored"
 msgstr ""
 
-#: ../../../__init__.py:248
+#: ./__init__.py:337
 msgid "failed"
 msgstr ""
 
-#: ../../../__init__.py:249
+#: ./__init__.py:338
 msgid "already done"
 msgstr ""
 
-#: ../../../__init__.py:250
+#: ./__init__.py:339
 msgid "cleaned"
 msgstr ""
 
-#: ../../../__init__.py:251
+#: ./__init__.py:340
 msgid "Total time : "
 msgstr ""
 

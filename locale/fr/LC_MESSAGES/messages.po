@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: saveTAGRating Rhythmbox plugin\n"
-"POT-Creation-Date: 2011-02-20 10:46+CET\n"
-"PO-Revision-Date: 2011-02-20 10:47+0100\n"
+"POT-Creation-Date: 2011-02-27 18:03+CET\n"
+"PO-Revision-Date: 2011-02-27 18:08+0100\n"
 "Last-Translator: \n"
 "Language-Team: vysserk3 <vysserk3@gmail.com>\n"
 "Language: \n"
@@ -18,50 +18,74 @@ msgstr ""
 "X-Poedit-Country: FRANCE\n"
 "X-Poedit-SourceCharset: utf-8\n"
 
-#: ../../../__init__.py:78
-#: ../../../__init__.py:79
-msgid "Save ratings and playcounts to files"
-msgstr "Sauvegarder le score et le nombre de lectures dans le fichier"
+#: __init__.py:163
+msgid "Save rating and playcount to file"
+msgstr "Sauvegarder la note et le nombre de lectures dans le fichier"
 
-#: ../../../__init__.py:84
-#: ../../../__init__.py:85
-msgid "Restore ratings and playcounts from files"
-msgstr "Restaurer le score et le nombre de lectures depuis le fichier audio"
+#: __init__.py:164
+msgid "Restore rating and playcount from file"
+msgstr "Restaurer la note et le nombre de lectures depuis le fichier"
 
-#: ../../../__init__.py:91
-#: ../../../__init__.py:92
-msgid "Remove rating/playcount tags of the selected files"
-msgstr "Supprimer tous les tags de scores et de nombre de lectures du fichier"
+#: __init__.py:165
+msgid "Remove rating and playcount tags"
+msgstr "Supprimer les tags de la note et du nombre de lectures"
 
-#: ../../../__init__.py:141
+#: __init__.py:168
+msgid "Save rating to file"
+msgstr "Sauvegarder la note dans le fichier"
+
+#: __init__.py:169
+msgid "Restore rating from file"
+msgstr "Restaurer la note depuis le fichier"
+
+#: __init__.py:170
+msgid "Remove rating tag"
+msgstr "Supprimer le tag de la note"
+
+#: __init__.py:172
+msgid "Save playcount to file"
+msgstr "Sauvegarder le nombre de lectures dans le fichier"
+
+#: __init__.py:173
+msgid "Restore playcount from file"
+msgstr "Restaurer le nombre de lectures depuis le fichier"
+
+#: __init__.py:174
+msgid "Remove playcount tag"
+msgstr "Supprimer le tag du nombre de lectures"
+
+#: __init__.py:234
 msgid "Processing..."
 msgstr "Traitement en cours..."
 
-#: ../../../__init__.py:245
+#: __init__.py:334
 msgid "Status"
 msgstr "Etat"
 
-#: ../../../__init__.py:246
+#: __init__.py:335
 msgid "saved"
 msgstr "sauvegardé(s)"
 
-#: ../../../__init__.py:247
+#: __init__.py:336
 msgid "restored"
 msgstr "restauré(s)"
 
-#: ../../../__init__.py:248
+#: __init__.py:337
 msgid "failed"
 msgstr "échoué(s)"
 
-#: ../../../__init__.py:249
+#: __init__.py:338
 msgid "already done"
 msgstr "déjà traité(s)"
 
-#: ../../../__init__.py:250
+#: __init__.py:339
 msgid "cleaned"
 msgstr "nettoyé(s)"
 
-#: ../../../__init__.py:251
+#: __init__.py:340
 msgid "Total time : "
 msgstr "Temps total : "
 
+#~ msgid "Remove rating/playcount tags of the selected files"
+#~ msgstr ""
+#~ "Supprimer tous les tags de notes et de nombre de lectures du fichier"

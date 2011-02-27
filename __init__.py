@@ -47,7 +47,6 @@ _ = t.ugettext
 
 
 # Some gconf keys to store user settings...
-# TODO: implement 'ratingsenabled' and 'playcountsenabled'
 gconf_keys = {'autosaveenabled' : '/apps/rhythmbox/plugins/saveTAGRating/autosave_enabled'
               , 'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
               , 'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
@@ -61,8 +60,13 @@ class saveTAGRating(rb.Plugin):
         
 
     def activate(self, shell):
+        # Store the shell
+        self.shell=shell
+        
         # Get the gconf boolean value for "autosave" feature
         self.autosaveenabled = gconf.client_get_default().get_bool(gconf_keys['autosaveenabled'])
+        self.ratingsenabled = gconf.client_get_default().get_bool(gconf_keys['ratingsenabled'])
+        self.playcountsenabled = gconf.client_get_default().get_bool(gconf_keys['playcountsenabled'])
         
         # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
         #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
@@ -81,55 +85,10 @@ class saveTAGRating(rb.Plugin):
               iconfactory.add(stock_id, iconset)
         iconfactory.add_default()
         
-       
-        
-        # Create two gtkAction
-        # One to save to file 
-        self.action = gtk.Action('savetofile', #name 
-                                 _('Save ratings and playcounts to files'), #label
-                                 _('Save ratings and playcounts to files'), #tooltip
-                                 'save_rating_playcount' # icon
-                                 )
-        # One to restore from file
-        self.action2 = gtk.Action('restorefromfile', #name 
-                                 _('Restore ratings and playcounts from files'), #label
-                                 _('Restore ratings and playcounts from files'), #tooltip
-                                 'restore_rating_playcount' # icon
-                                 )
-        
-        # One to clean all tag (POPM,PCNT, TXXX, FMPS, etc...)
-        self.action3 = gtk.Action('cleanalltags', #name 
-                                 _('Remove rating/playcount tags of the selected files'), #label
-                                 _('Remove rating/playcount tags of the selected files'), #tooltip
-                                 'clean_alltags' # icon
-                                 )
-        
-        # TODO: rajouter une action plus évoluée pour la synchro bidirectionnelle ?
-        # TODO: faire une sauvegarde la BD de rhythmbox avant de modifier (dans /tmp ?)
-
-        
-  
-        
-        # Define callback methods on these actions
-        self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
-        self.action2.connect('activate', self.executedoActionOnSelected, self.restoreRhythmDBFromFile, shell)
-        self.action3.connect('activate', self.executedoActionOnSelected, self.cleanAllTags, shell)
-        
-        # Un autre menu pour une autre action (qui s'appliquerait sur les éléments sélectionnés aurait la forme suivante :
-        #self.actionX.connect('activate', self.executedoActionOnSelected,self.une_methode_a_definir_dans_la_classe, shell)
+        self.setup_gtkactions(shell)
         
         
-        # Create a group of actions, add the previously defined actions to it, and insert it to the ui manager
-        self.action_group = gtk.ActionGroup('saveTAGRatingPluginActions')
-        self.action_group.add_action(self.action)
-        self.action_group.add_action(self.action2)
-        self.action_group.add_action(self.action3)
-        self.uim = shell.get_ui_manager ()
-        self.uim.insert_action_group(self.action_group, 0)
-        
-        # Load the ui structure from the xml file
-        self.ui_id = self.uim.add_ui_from_file(self.find_file("saveratings_ui.xml"))
-        
+      
         ## Setup statusbar and progressbar
         player = shell.get_player()
         self.statusbar = player.get_property("statusbar")
@@ -156,15 +115,14 @@ class saveTAGRating(rb.Plugin):
         # Start time
         self.t0 = 0
         
-        # Refresh user interface
-        self.uim.ensure_update()
+        
         print("Plugin activated")
         
 
     def create_configure_dialog(self, dialog=None):
         if not dialog:
             builder_file = self.find_file("savetagrating-prefs.ui")
-            dialog = saveTAGRatingConfigureDialog(builder_file, gconf_keys,self).get_dialog()
+            dialog = saveTAGRatingConfigureDialog(builder_file, gconf_keys, self).get_dialog()
         dialog.present()
         
         return dialog
@@ -195,6 +153,72 @@ class saveTAGRating(rb.Plugin):
             del self.entrychanged_sig_id
         del self.db
         print("Plugin deactivated")
+
+
+    def setup_gtkactions(self,shell):
+        # Create three gtkAction
+        create_gtkAction=True
+        if self.ratingsenabled and self.playcountsenabled:
+            savetext=_('Save rating and playcount to file')
+            restoretext=_('Restore rating and playcount from file')
+            cleantext=_('Remove rating and playcount tags')
+        else:
+            if self.ratingsenabled:
+                savetext=_('Save rating to file')
+                restoretext=_('Restore rating from file')
+                cleantext=_('Remove rating tag')
+            elif self.playcountsenabled:
+                savetext=_('Save playcount to file')
+                restoretext=_('Restore playcount from file')
+                cleantext=_('Remove playcount tag')
+            else:
+                create_gtkAction=False
+        
+        
+        if create_gtkAction:
+            self.action = gtk.Action('savetofile', #name 
+                                     savetext, #label
+                                     savetext, #tooltip
+                                     'save_rating_playcount' # icon
+                                     )
+            # One to restore from file
+            self.action2 = gtk.Action('restorefromfile', #name 
+                                     restoretext, #label
+                                     restoretext, #tooltip
+                                     'restore_rating_playcount' # icon
+                                     )
+            
+            # One to clean all tag (POPM,PCNT, TXXX, FMPS, etc...)
+            self.action3 = gtk.Action('cleanalltags', #name 
+                                     cleantext, #label
+                                     cleantext, #tooltip
+                                     'clean_alltags' # icon
+                                     )
+            
+              # Define callback methods on these actions
+            self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
+            self.action2.connect('activate', self.executedoActionOnSelected, self.restoreRhythmDBFromFile, shell)
+            self.action3.connect('activate', self.executedoActionOnSelected, self.cleanAllTags, shell)
+            
+            # Un autre menu pour une autre action (qui s'appliquerait sur les éléments sélectionnés aurait la forme suivante :
+            #self.actionX.connect('activate', self.executedoActionOnSelected,self.une_methode_a_definir_dans_la_classe, shell)
+            
+            
+            # Create a group of actions, add the previously defined actions to it, and insert it to the ui manager
+            self.action_group = gtk.ActionGroup('saveTAGRatingPluginActions')
+            self.action_group.add_action(self.action)
+            self.action_group.add_action(self.action2)
+            self.action_group.add_action(self.action3)
+            self.uim = shell.get_ui_manager ()
+            self.uim.insert_action_group(self.action_group, 0)
+            
+            # Load the ui structure from the xml file
+            self.ui_id = self.uim.add_ui_from_file(self.find_file("saveratings_ui.xml"))
+            
+            # Refresh user interface
+            self.uim.ensure_update()
+            
+      
 
 
     def executedoActionOnSelected(self, action, doaction, shell):
@@ -391,46 +415,47 @@ class saveTAGRating(rb.Plugin):
         # We use needsave boolean to do that
         needsave = False
         
-        
-        if dbrating > 0:
-            # First we store it in POPM format
-            popmlist = audio.getall('POPM')
-            if popmlist == []:
-                # No existing tag POPM has been found, so create one...
-                audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
-                needsave = True
-            else:
-                # An existing tag POPM has been found, let's check if the rating has changed
-                if self._convert_ID3v2_rating_to_rhythmbdb_rating(popmlist[0].rating) != dbrating:
-                    # If it has, erase the value of the file an replace it with the db value (converted)
-                    audio.delall('POPM')
+        if self.ratingsenabled:
+            if dbrating > 0:
+                # First we store it in POPM format
+                popmlist = audio.getall('POPM')
+                if popmlist == []:
+                    # No existing tag POPM has been found, so create one...
                     audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
                     needsave = True
-            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
-            if fmpslist == []:
-                # No existing tag TXXX for FMPS has been found, so create one...
-                audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
-                needsave = True
-            else:
-                # An existing tag TXXX for FMPS has been found, let's check if the rating has changed
-                if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
-                    # If it has, erase the value of the file an replace it with the db value (converted)
-                    audio.delall(u'TXXX:FMPS_Rating')
+                else:
+                    # An existing tag POPM has been found, let's check if the rating has changed
+                    if self._convert_ID3v2_rating_to_rhythmbdb_rating(popmlist[0].rating) != dbrating:
+                        # If it has, erase the value of the file an replace it with the db value (converted)
+                        audio.delall('POPM')
+                        audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
+                        needsave = True
+                fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+                if fmpslist == []:
+                    # No existing tag TXXX for FMPS has been found, so create one...
                     audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
-                    needsave = True            
-            
-        if dbcount > 0:
-            pcntlist = audio.getall('PCNT')
-            if pcntlist == []:
-                # No existing tag PCNT has been found, create one...
-                audio.add(PCNT(count=int(dbcount)))
-                needsave = True
-            else:
-                # An existing tag PCNT has been found, let's check if the count has changed
-                if pcntlist[0].count != dbcount:
-                    audio.delall('PCNT')
+                    needsave = True
+                else:
+                    # An existing tag TXXX for FMPS has been found, let's check if the rating has changed
+                    if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
+                        # If it has, erase the value of the file an replace it with the db value (converted)
+                        audio.delall(u'TXXX:FMPS_Rating')
+                        audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
+                        needsave = True            
+        
+        if self.playcountsenabled: 
+            if dbcount > 0:
+                pcntlist = audio.getall('PCNT')
+                if pcntlist == []:
+                    # No existing tag PCNT has been found, create one...
                     audio.add(PCNT(count=int(dbcount)))
                     needsave = True
+                else:
+                    # An existing tag PCNT has been found, let's check if the count has changed
+                    if pcntlist[0].count != dbcount:
+                        audio.delall('PCNT')
+                        audio.add(PCNT(count=int(dbcount)))
+                        needsave = True
 
         if needsave:
             # save to file only if needed
@@ -509,42 +534,44 @@ class saveTAGRating(rb.Plugin):
         
         
         needsave = False
-        if existingrating is None:
-            # There is no existing rating tag
-            if converted_dbrating > 0:
-                # Create one, only if the value we want to save is greater than 0
-                audio[rating_identifier] = [encoding(converted_dbrating)]
-                needsave = True
-        else:
-            # There is an existing rating tag, if the value has changed...
-            if float(existingrating[0]) != converted_dbrating:
-                # And if the value we want to save is greater than 0..
+        
+        if self.ratingsenabled:
+            if existingrating is None:
+                # There is no existing rating tag
                 if converted_dbrating > 0:
-                    # Update the tag
+                    # Create one, only if the value we want to save is greater than 0
                     audio[rating_identifier] = [encoding(converted_dbrating)]
-                else:
-                    # If the value we want to save is 0, remove the tag from the comment
-                    del audio[rating_identifier]
-                needsave = True
+                    needsave = True
+            else:
+                # There is an existing rating tag, if the value has changed...
+                if float(existingrating[0]) != converted_dbrating:
+                    # And if the value we want to save is greater than 0..
+                    if converted_dbrating > 0:
+                        # Update the tag
+                        audio[rating_identifier] = [encoding(converted_dbrating)]
+                    else:
+                        # If the value we want to save is 0, remove the tag from the comment
+                        del audio[rating_identifier]
+                    needsave = True
         
-        
-        if existingcount is None:
-            # There is no existing count tag
-            if converted_dbcount > 0:
-                # Create one, only if the value we want to save is greater than 0
-                audio[playcount_identifier] = [encoding(converted_dbcount)]
-                needsave = True
-        else:
-            # There is an existing count tag, if the value has changed...
-            if float(existingcount[0]) != converted_dbcount:
-                # And if the value we want to save is greater than 0..
+        if self.playcountsenabled:
+            if existingcount is None:
+                # There is no existing count tag
                 if converted_dbcount > 0:
-                    # Update the tag
+                    # Create one, only if the value we want to save is greater than 0
                     audio[playcount_identifier] = [encoding(converted_dbcount)]
-                else:
-                    # If the value we want to save is 0, remove the tag from the comment
-                    del audio[playcount_identifier]
-                needsave = True
+                    needsave = True
+            else:
+                # There is an existing count tag, if the value has changed...
+                if float(existingcount[0]) != converted_dbcount:
+                    # And if the value we want to save is greater than 0..
+                    if converted_dbcount > 0:
+                        # Update the tag
+                        audio[playcount_identifier] = [encoding(converted_dbcount)]
+                    else:
+                        # If the value we want to save is 0, remove the tag from the comment
+                        del audio[playcount_identifier]
+                    needsave = True
 
         if needsave:
             # save to file only if needed            
@@ -610,22 +637,26 @@ class saveTAGRating(rb.Plugin):
         audio = ID3(pathSong)
         
         filerating = 0
-        popmlist = audio.getall('POPM')
-        if popmlist != []:
-            rating = popmlist[0].rating
-            filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-        fmpslist = audio.getall(u'TXXX:FMPS_Rating')
-        if fmpslist != []:
-            rating = fmpslist[0].text[0] # is an unicode string
-            filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
+        
+        if self.ratingsenabled:
+            popmlist = audio.getall('POPM')
+            if popmlist != []:
+                rating = popmlist[0].rating
+                filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
+            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
+            if fmpslist != []:
+                rating = fmpslist[0].text[0] # is an unicode string
+                filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
             
         #Attention, filerating prendra ici la valeur de TXXX par défaut
         # mais si il n'pas de TXXX, alors la valeur POPM sera choisie
         
         filecount = 0
-        pcntlist = audio.getall('PCNT')
-        if pcntlist != []:
-            filecount = pcntlist[0].count    
+        
+        if self.playcountsenabled:
+            pcntlist = audio.getall('PCNT')
+            if pcntlist != []:
+                filecount = pcntlist[0].count    
         
         return (filerating, filecount)
         
@@ -727,14 +758,15 @@ class saveTAGRating(rb.Plugin):
                 # Use need commit to commit only if necessary (if the tags read from the file are different)            
                 needcommit = False
                 
+                if self.ratingsenabled:
+                    if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
+                        db.set(element, rhythmdb.PROP_RATING, filerating)
+                        needcommit = True
                 
-                if filerating > 0 and db.entry_get(element, rhythmdb.PROP_RATING) != filerating:
-                    db.set(element, rhythmdb.PROP_RATING, filerating)
-                    needcommit = True
-                            
-                if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
-                    db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
-                    needcommit = True
+                if self.playcountsenabled:     
+                    if filecount > 0 and db.entry_get(element, rhythmdb.PROP_PLAY_COUNT) != filecount:
+                        db.set(element, rhythmdb.PROP_PLAY_COUNT, filecount)
+                        needcommit = True
                 
                 if needcommit:
                     db.commit()
@@ -828,6 +860,8 @@ class saveTAGRating(rb.Plugin):
          if changes[0].prop == rhythmdb.PROP_RATING or changes[0].prop == rhythmdb.PROP_PLAY_COUNT:
              self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
              print("autosave done")
+             
+    
        
         
             

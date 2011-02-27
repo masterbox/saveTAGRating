@@ -20,7 +20,7 @@
             <property name="orientation">vertical</property>
             <child>
               <object class="GtkCheckButton" id="ratingscheckbutton">
-                <property name="label" translatable="yes">Rating (not implemented)</property>
+                <property name="label" translatable="yes">Support rating</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
@@ -32,7 +32,7 @@
             </child>
             <child>
               <object class="GtkCheckButton" id="playcountscheckbutton">
-                <property name="label" translatable="yes">Playcounts (not implemented)</property>
+                <property name="label" translatable="yes">Support playcount</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
