@@ -14,7 +14,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 #
-#       This is based on saveTAGCover plugin written by (Copyright (C) 2010 Jeronimo Buencuerpo Fariña jerolata@gmail.com)
+#       This is based on saveTAGCover plugin written by (Copyright (C) 2010 Jeronimo Buencuerpo Farina jerolata@gmail.com)
 #       Matthieu Bosc (mbosc77@gmail.com)
 #       Vysserk3  (vysserk3@gmail.com)
 #
@@ -35,6 +35,7 @@ import gconf
 import gettext
 import gobject
 import gtk
+import gtk.glade
 import pynotify
 import rb
 import rhythmdb
@@ -44,6 +45,8 @@ import sys
 # Setup our own gettext locale domain (else, we should add our translation file inside rhythmbox sources)
 t = gettext.translation('messages', sys.path[0] + "/locale")
 _ = t.ugettext
+gtk.glade.bindtextdomain('uiglade', sys.path[0] + "/locale")
+gtk.glade.textdomain('uiglade')
 
 
 
