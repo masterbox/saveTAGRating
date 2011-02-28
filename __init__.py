@@ -130,14 +130,15 @@ class saveTAGRating(rb.Plugin):
             
     def deactivate(self, shell):
         """ Dereference any fields that has been initialized in activate"""
-        self.uim.remove_ui (self.ui_id)
-        del self.ui_id
-        self.uim.remove_action_group (self.action_group)
-        del self.uim
-        del self.action_group
-        del self.action
-        del self.action2
-        del self.action3
+        if self.create_gtkAction:
+            self.uim.remove_ui (self.ui_id)
+            del self.ui_id
+            self.uim.remove_action_group (self.action_group)
+            del self.uim
+            del self.action_group
+            del self.action
+            del self.action2
+            del self.action3
         del self.pluginrootpath
         del self.statusbar
         del self.progressbar
@@ -172,10 +173,10 @@ class saveTAGRating(rb.Plugin):
                 restoretext=_('Restore playcount from file')
                 cleantext=_('Remove playcount tag')
             else:
-                create_gtkAction=False
+                self.create_gtkAction=False
         
         
-        if create_gtkAction:
+        if self.create_gtkAction:
             self.action = gtk.Action('savetofile', #name 
                                      savetext, #label
                                      savetext, #tooltip
