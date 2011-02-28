@@ -74,10 +74,6 @@ class saveTAGRating(rb.Plugin):
         self.ratingsenabled = gconf.client_get_default().get_bool(gconf_keys['ratingsenabled'])
         self.playcountsenabled = gconf.client_get_default().get_bool(gconf_keys['playcountsenabled'])
         
-        # Store the full path to the plugin directory (to access external resources as XML ui definition, icons, etc...)
-        #self.pluginrootpath = path.expanduser("~/.local/share/rhythmbox/plugins/saveTAGRating/")
-        self.pluginrootpath = sys.path[0] + "/"
-        
         # Create stock id for icons (save,restore, clean)
         iconfactory = gtk.IconFactory()
         stock_ids = gtk.stock_list_ids()
@@ -146,7 +142,6 @@ class saveTAGRating(rb.Plugin):
             del self.action2
             del self.action3
         del self.create_gtkAction
-        del self.pluginrootpath
         del self.statusbar
         del self.progressbar
         del self.num_saved
