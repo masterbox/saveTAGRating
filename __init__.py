@@ -66,6 +66,7 @@ class saveTAGRating(rb.Plugin):
         
 
     def activate(self, shell):
+        """ Activation method, initialization phase """
         # Store the shell
         self.shell=shell
         
@@ -87,11 +88,12 @@ class saveTAGRating(rb.Plugin):
               iconfactory.add(stock_id, iconset)
         iconfactory.add_default()
         
+        
+        # Setup gtk.Action (for the right-click menu) (see method definition below)
         self.setup_gtkactions(shell)
         
         
-      
-        ## Setup statusbar and progressbar
+        # Setup statusbar and progressbar
         player = shell.get_player()
         self.statusbar = player.get_property("statusbar")
         # Is there a better way to get access to it ???
@@ -100,7 +102,7 @@ class saveTAGRating(rb.Plugin):
         # Store a reference to the db
         self.db = shell.props.db
         
-        # Each time an entry is changed, call the given method
+        # If autosave is enabled, each time an entry is changed call the given method
         if self.autosaveenabled:
             self.entrychanged_sig_id = self.db.connect('entry-changed', self._on_entry_change)
 
@@ -117,14 +119,17 @@ class saveTAGRating(rb.Plugin):
         # Start time
         self.t0 = 0
         
-        
         print("Plugin activated")
         
 
     def create_configure_dialog(self, dialog=None):
+        """ Create a configuration dialog for the plugin """
         if not dialog:
+            # Use the ui glade interface file
             builder_file = self.find_file("savetagrating-prefs.ui")
+            # Create the saveTAGRatingConfigureDialog object
             dialog = saveTAGRatingConfigureDialog(builder_file, gconf_keys, self).get_dialog()
+        
         dialog.present()
         
         return dialog
@@ -158,34 +163,51 @@ class saveTAGRating(rb.Plugin):
         print("Plugin deactivated")
 
 
+
+
+
     def setup_gtkactions(self,shell):
+        """ Method to be called to create gtk.Action and menu entries 
+        AND to update existing menu (meaning, it can be called several times during plugin runtime) 
+        That's why we need to "clean" any existing menu ui before...
+        """
+        
+        
         # Clean previous ui (if any)
         if "uim" in dir(self):
                 self.uim.remove_ui(self.ui_id)
                 self.uim.ensure_update()
                 
-        
+        # If both rating support and playcount support are enabled...
         if self.ratingsenabled and self.playcountsenabled:
             savetext=_('Save rating and playcount to file')
             restoretext=_('Restore rating and playcount from file')
             cleantext=_('Remove rating and playcount tags')
             self.create_gtkAction=True
+        
         else:
+            # If only rating support is enabled...
             if self.ratingsenabled:
                 savetext=_('Save rating to file')
                 restoretext=_('Restore rating from file')
                 cleantext=_('Remove rating tag')
                 self.create_gtkAction=True
+            # If only playcount support is enabled...
             elif self.playcountsenabled:
                 savetext=_('Save playcount to file')
                 restoretext=_('Restore playcount from file')
                 cleantext=_('Remove playcount tag')
                 self.create_gtkAction=True
             else:
+                # Nothing is enabled, we don't need to create gtk.Action
                 self.create_gtkAction=False
+        
+        
         
         if self.create_gtkAction:
             # Create three gtkAction
+            
+            # One to save to file
             self.action = gtk.Action('savetofile', #name 
                                      savetext, #label
                                      savetext, #tooltip
@@ -205,15 +227,12 @@ class saveTAGRating(rb.Plugin):
                                      'clean_alltags' # icon
                                      )
             
-              # Define callback methods on these actions
+            # Define callback methods on these actions
             self.action.connect('activate', self.executedoActionOnSelected, self.saveRhythmDBToFile, shell)       
             self.action2.connect('activate', self.executedoActionOnSelected, self.restoreRhythmDBFromFile, shell)
             self.action3.connect('activate', self.executedoActionOnSelected, self.cleanAllTags, shell)
             
-            # Un autre menu pour une autre action (qui s'appliquerait sur les éléments sélectionnés aurait la forme suivante :
-            #self.actionX.connect('activate', self.executedoActionOnSelected,self.une_methode_a_definir_dans_la_classe, shell)
-            
-            
+
             # Create a group of actions, add the previously defined actions to it, and insert it to the ui manager
             self.action_group = gtk.ActionGroup('saveTAGRatingPluginActions')
             self.action_group.add_action(self.action)
@@ -290,12 +309,6 @@ class saveTAGRating(rb.Plugin):
         """ Use chunked idle callbacks to perform IO operation in an asynchronous way
         See http://live.gnome.org/RhythmboxPlugins/WritingGuide#Using_idle_callbacks_for_repeated_tasks
         """
-#        global num_cleaned, num_saved, num_failed, num_restored, num_already_done
-#        global iel
-#        global t0
-        
-        
-        
         gtk.gdk.threads_enter()
         finished = False
         
@@ -534,7 +547,6 @@ class saveTAGRating(rb.Plugin):
         count : the playcount to store (from the db)
         
         """
-        #global num_saved, num_already_done
         # First convert the rhytmbox db value to standard defined in the specs (float between 0 and 1)
         converted_dbrating = 0.2 * rating
         # Convert the count from the db (integer) to a float 
@@ -618,7 +630,6 @@ class saveTAGRating(rb.Plugin):
         - Should be audio format agnostic 
         
         """
-        #global num_saved, num_failed
         try:
             # Get the dbrating value (float) of the RhythmboxDB element 
             dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
@@ -755,7 +766,6 @@ class saveTAGRating(rb.Plugin):
         - Restore ratings and playcounts from file to Rhythmbox db
         - Should be audio format agnostic
         """
-        #global num_restored, num_failed, num_already_done
        
         try: 
             # Get the audio tagging format of the current element
@@ -793,7 +803,7 @@ class saveTAGRating(rb.Plugin):
 
 
     def cleanAllTags(self, db, element, path_normalizado):
-        #global num_cleaned, num_failed,num_already_done
+        """ Method to clean all rating and playcount tags from the file"""
         try: 
             # Get the audio tagging format of the current element
             format = self._check_recognized_format(path_normalizado)
@@ -870,12 +880,9 @@ class saveTAGRating(rb.Plugin):
 
     
     def _on_entry_change(self, db, entry, changes):
-         if changes[0].prop == rhythmdb.PROP_RATING or changes[0].prop == rhythmdb.PROP_PLAY_COUNT:
+        """ Callback method that is called each time an database entry is changed (autosave feature)
+        We only need to catch specific entry changes (PROP_RATING, PROP_PLAY_COUNT) 
+        """
+        if changes[0].prop == rhythmdb.PROP_RATING or changes[0].prop == rhythmdb.PROP_PLAY_COUNT:
              self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
-             print("autosave done")
-             
-    
-       
-        
-            
-
+             print("Autosave done")
