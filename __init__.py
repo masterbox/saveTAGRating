@@ -41,12 +41,18 @@ import rhythmdb
 import sys
 
 
+# Setup our own gettext locale domain (else, we should add our translation file inside rhythmbox sources)
 t = gettext.translation('messages', sys.path[0] + "/locale")
 _ = t.ugettext
 
 
 
 # Some gconf keys to store user settings...
+# autosaveenabled : if enabled, each a database property is changed (rating or playcount), the change
+# are automatically saved to the file
+# ratingsenabled : if enabled, support rating save/restore/clean/autosave
+# playcountsenabled : if enabled, support playcount save/restore/clean/autosave
+
 gconf_keys = {'autosaveenabled' : '/apps/rhythmbox/plugins/saveTAGRating/autosave_enabled'
               , 'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
               , 'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
@@ -63,7 +69,7 @@ class saveTAGRating(rb.Plugin):
         # Store the shell
         self.shell=shell
         
-        # Get the gconf boolean value for "autosave" feature
+        # Retrieve some gconf values
         self.autosaveenabled = gconf.client_get_default().get_bool(gconf_keys['autosaveenabled'])
         self.ratingsenabled = gconf.client_get_default().get_bool(gconf_keys['ratingsenabled'])
         self.playcountsenabled = gconf.client_get_default().get_bool(gconf_keys['playcountsenabled'])
@@ -80,7 +86,7 @@ class saveTAGRating(rb.Plugin):
                                ('clean_alltags', 'clean.png')]:
             # only load image files when our stock_id is not present
             if stock_id not in stock_ids:
-              pixbuf = gtk.gdk.pixbuf_new_from_file(self.pluginrootpath + file)
+              pixbuf = gtk.gdk.pixbuf_new_from_file(self.find_file(file))
               iconset = gtk.IconSet(pixbuf)
               iconfactory.add(stock_id, iconset)
         iconfactory.add_default()
