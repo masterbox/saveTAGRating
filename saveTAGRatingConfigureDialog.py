@@ -35,6 +35,7 @@ class saveTAGRatingConfigureDialog:
 		
 		self.dialog=builder.get_object("preferences_dialog")
 		
+		
 		# Get the boolean values from gconf (store them for later restoration (if needed))
 		self.autosaveenabled=self.gconf.get_bool(self.gconf_keys['autosaveenabled'])
 		self.ratingsenabled=self.gconf.get_bool(self.gconf_keys['ratingsenabled'])
@@ -48,6 +49,7 @@ class saveTAGRatingConfigureDialog:
 		self.playcountscheckbutton=builder.get_object("playcountscheckbutton")
 		self.playcountscheckbutton.set_active(self.playcountsenabled)
 		
+		
 		# Setup callbacks
 		self.dialog.connect("response", self.dialog_response)
 		self.autosavecheckbutton.connect("toggled",self.autosavetoggle_callback)
@@ -57,13 +59,13 @@ class saveTAGRatingConfigureDialog:
 
 	def dialog_response(self, dialog, response):
 		if response == gtk.RESPONSE_OK:
-			if self.gconf.get_bool(self.gconf_keys['autosaveenabled']):
+			if self.autosavecheckbutton.get_active():
 				self.rbplugin.entrychanged_sig_id = self.rbplugin.db.connect('entry-changed', self.rbplugin._on_entry_change)
 			else:
 				self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
 			
-			self.rbplugin.ratingsenabled=self.gconf.get_bool(self.gconf_keys['ratingsenabled'])		
-			self.rbplugin.playcountsenabled=self.gconf.get_bool(self.gconf_keys['playcountsenabled'])
+			self.rbplugin.ratingsenabled=self.ratingscheckbutton.get_active()		
+			self.rbplugin.playcountsenabled=self.playcountscheckbutton.get_active()
 			self.rbplugin.setup_gtkactions(self.rbplugin.shell)
 			
 			self.dialog.hide()
@@ -86,9 +88,11 @@ class saveTAGRatingConfigureDialog:
 		# Change the gconf value whenever the checkbox is changed
 		self.gconf.set_bool(self.gconf_keys['autosaveenabled'],widget.get_active())
 		
+		
 	def ratingstoggle_callback(self,widget):
 		# Change the gconf value whenever the checkbox is changed
 		self.gconf.set_bool(self.gconf_keys['ratingsenabled'],widget.get_active())
+			
 		
 	
 	def playcountstoggle_callback(self,widget):

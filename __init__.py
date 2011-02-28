@@ -158,25 +158,33 @@ class saveTAGRating(rb.Plugin):
 
 
     def setup_gtkactions(self,shell):
-        # Create three gtkAction
-        self.create_gtkAction=True
+        # Clean previous ui (if any)
+        if "uim" in dir(self):
+                self.uim.remove_ui(self.ui_id)
+                self.uim.ensure_update()
+                
+        
         if self.ratingsenabled and self.playcountsenabled:
             savetext=_('Save rating and playcount to file')
             restoretext=_('Restore rating and playcount from file')
             cleantext=_('Remove rating and playcount tags')
+            self.create_gtkAction=True
         else:
             if self.ratingsenabled:
                 savetext=_('Save rating to file')
                 restoretext=_('Restore rating from file')
                 cleantext=_('Remove rating tag')
+                self.create_gtkAction=True
             elif self.playcountsenabled:
                 savetext=_('Save playcount to file')
                 restoretext=_('Restore playcount from file')
                 cleantext=_('Remove playcount tag')
+                self.create_gtkAction=True
             else:
                 self.create_gtkAction=False
         
         if self.create_gtkAction:
+            # Create three gtkAction
             self.action = gtk.Action('savetofile', #name 
                                      savetext, #label
                                      savetext, #tooltip
@@ -218,7 +226,10 @@ class saveTAGRating(rb.Plugin):
             
             # Refresh user interface
             self.uim.ensure_update()
-            
+
+
+               
+      
       
 
 
