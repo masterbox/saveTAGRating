@@ -139,6 +139,7 @@ class saveTAGRating(rb.Plugin):
             del self.action
             del self.action2
             del self.action3
+        del self.create_gtkAction
         del self.pluginrootpath
         del self.statusbar
         del self.progressbar
@@ -158,7 +159,7 @@ class saveTAGRating(rb.Plugin):
 
     def setup_gtkactions(self,shell):
         # Create three gtkAction
-        create_gtkAction=True
+        self.create_gtkAction=True
         if self.ratingsenabled and self.playcountsenabled:
             savetext=_('Save rating and playcount to file')
             restoretext=_('Restore rating and playcount from file')
@@ -174,7 +175,6 @@ class saveTAGRating(rb.Plugin):
                 cleantext=_('Remove playcount tag')
             else:
                 self.create_gtkAction=False
-        
         
         if self.create_gtkAction:
             self.action = gtk.Action('savetofile', #name 
