@@ -78,6 +78,7 @@ class saveTAGRatingConfigureDialog:
 				# Else, disconnect it (but only if it was already connected)
 				if self.rbplugin.autosaveenabled:
 					self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
+					self.rbplugin.autosaveenabled=False
 			
 			
 			# If the rating checkbutton is enabled, set the corresponding variable in the rbplugin instance
@@ -102,7 +103,7 @@ class saveTAGRatingConfigureDialog:
 			self.dialog.hide()
 			
 		else:
-			print("unexpected response type")
+			print("Unexpected response type")
 	
 	
 	

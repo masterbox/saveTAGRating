@@ -57,8 +57,8 @@ gtk.glade.textdomain('uiglade')
 # playcountsenabled : if enabled, support playcount save/restore/clean/autosave
 
 gconf_keys = {'autosaveenabled' : '/apps/rhythmbox/plugins/saveTAGRating/autosave_enabled'
-              , 'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
-              , 'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
+              ,'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
+              ,'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
               }
 
 
