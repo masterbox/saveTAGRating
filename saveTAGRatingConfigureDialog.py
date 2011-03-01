@@ -115,9 +115,16 @@ class saveTAGRatingConfigureDialog:
 	def ratingstoggle_callback(self, widget):
 		# Change the gconf value whenever the checkbox is changed
 		self.gconf.set_bool(self.gconf_keys['ratingsenabled'], widget.get_active())
-			
+		self.disableautosavecheckbutton()
 			
 	def playcountstoggle_callback(self, widget):
 		# Change the gconf value whenever the checkbox is changed
 		self.gconf.set_bool(self.gconf_keys['playcountsenabled'], widget.get_active())
-		
+		self.disableautosavecheckbutton()
+	
+	def disableautosavecheckbutton(self):
+		if not self.ratingscheckbutton.get_active() and not self.playcountscheckbutton.get_active():
+			self.autosavecheckbutton.set_active(False)
+			self.autosavecheckbutton.set_sensitive(False)
+		else:
+			self.autosavecheckbutton.set_sensitive(True)  

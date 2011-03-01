@@ -812,9 +812,7 @@ class saveTAGRating(rb.Plugin):
             format = self._check_recognized_format(path_normalizado)
             if format is None:
                raise Exception("Unrecognized format")
-            
             else:
-                
                 needsave = False
                 if format == "id3v2":
                     audio = ID3(path_normalizado)
