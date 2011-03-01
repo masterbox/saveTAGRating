@@ -69,12 +69,15 @@ class saveTAGRatingConfigureDialog:
 		Two possible response : OK and CANCEL
 		"""
 		if response == gtk.RESPONSE_OK:
+			
 			if self.autosavecheckbutton.get_active():
 				# If autosave is enable, connect (in the rbplugin instance) the "entry-changed" signal.
+				self.rbplugin.autosaveenabled=True
 				self.rbplugin.entrychanged_sig_id = self.rbplugin.db.connect('entry-changed', self.rbplugin._on_entry_change)
 			else:
-				# Else, disconnect it 
-				self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
+				# Else, disconnect it (but only if it was already connected)
+				if self.rbplugin.autosaveenabled:
+					self.rbplugin.db.disconnect(self.rbplugin.entrychanged_sig_id)
 			
 			
 			# If the rating checkbutton is enabled, set the corresponding variable in the rbplugin instance
