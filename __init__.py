@@ -45,13 +45,10 @@ import sys
 # Setup our own gettext locale domain (else, we should add our translation file inside rhythmbox sources)
 t = gettext.translation('messages', sys.path[0] + "/locale")
 _ = t.ugettext
-gtk.glade.bindtextdomain('uiglade', sys.path[0] + "/locale")
-gtk.glade.textdomain('uiglade')
-
 
 
 # Some gconf keys to store user settings...
-# autosaveenabled : if enabled, each a database property is changed (rating or playcount), the change
+# autosaveenabled : if enabled, each time a database property is changed (rating or playcount), the change
 # are automatically saved to the file
 # ratingsenabled : if enabled, support rating save/restore/clean/autosave
 # playcountsenabled : if enabled, support playcount save/restore/clean/autosave

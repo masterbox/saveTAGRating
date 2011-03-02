@@ -22,7 +22,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA.
 import gtk
+import gtk.glade
 import gconf
+import sys
+
+gtk.glade.bindtextdomain("uiglade", sys.path[0] + "/locale")
+
 
 class saveTAGRatingConfigureDialog:
 	""" Class representing the configuration dialog of the plugin"""
@@ -35,9 +40,13 @@ class saveTAGRatingConfigureDialog:
 		# Store the calling plugin (rbplugin)
 		self.rbplugin = rbplugin
 		
+		
 		# Create a builder and load the ui file (glade interface)
 		builder = gtk.Builder()
+		builder.set_translation_domain("uiglade")
 		builder.add_from_file(builder_file)
+		
+		
 		
 		# Get the gtk dialog object 
 		self.dialog = builder.get_object("preferences_dialog")
@@ -62,7 +71,7 @@ class saveTAGRatingConfigureDialog:
 		self.autosavecheckbutton.connect("toggled", self.autosavetoggle_callback)
 		self.ratingscheckbutton.connect("toggled", self.ratingstoggle_callback)
 		self.playcountscheckbutton.connect("toggled", self.playcountstoggle_callback)
-
+		
 
 	def dialog_response(self, dialog, response):
 		""" Callback method for the dialog 
