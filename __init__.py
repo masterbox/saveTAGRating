@@ -36,7 +36,12 @@ import gettext
 import gobject
 import gtk
 import gtk.glade
-import pynotify
+try:
+    import pynotify
+    usepynotify=True
+except ImportError:
+    usepynotify=False
+        
 import rb
 import rhythmdb
 import sys
@@ -355,16 +360,29 @@ class saveTAGRating(rb.Plugin):
         self.progressbar.set_fraction(0.0)
 
         # Notification at the end of process
-        pynotify.init('notify_user')
-        pynotify.Notification(_("Status"),
-                              str(self.num_saved) + " " + _("saved") + "\n" + 
-                              str(self.num_restored) + " " + _("restored") + "\n" + 
-                              str(self.num_failed) + " " + _("failed") + "\n" + 
-                              str(self.num_already_done) + " " + _("already done") + "\n" + 
-                              str(self.num_cleaned) + " " + _("cleaned") + "\n" + 
-                              _("Total time : ") + str(totaltime) + " s"
-                              ).show()
+        # Use pynotify if the import pynotify did not fail
+        if usepynotify:
+            pynotify.init('notify_user')
+            pynotify.Notification(_("Status"),
+                                  str(self.num_saved) + " " + _("saved") + "\n" + 
+                                  str(self.num_restored) + " " + _("restored") + "\n" + 
+                                  str(self.num_failed) + " " + _("failed") + "\n" + 
+                                  str(self.num_already_done) + " " + _("already done") + "\n" + 
+                                  str(self.num_cleaned) + " " + _("cleaned") + "\n" + 
+                                  _("Total time : ") + str(totaltime) + " s"
+                                  ).show()
+        
+        # In all the cases, use the status bar to print the stats
+        self.statusbar.push(2222, str(self.num_saved) + " " + _("saved") + ", " + 
+                                  str(self.num_restored) + " " + _("restored") + ", " + 
+                                  str(self.num_failed) + " " + _("failed") + ", " + 
+                                  str(self.num_already_done) + " " + _("already done") + ", " + 
+                                  str(self.num_cleaned) + " " + _("cleaned") + ", " + 
+                                  _("Total time : ") + str(totaltime) + " s")
         return False
+        
+    
+
         
     
     
