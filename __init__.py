@@ -27,9 +27,8 @@ from mutagen.mp4 import MP4
 from mutagen.musepack import Musepack
 from mutagen.oggspeex import OggSpeex
 from mutagen.oggvorbis import OggVorbis
-from os import path
 from saveTAGRatingConfigureDialog import saveTAGRatingConfigureDialog
-from time import time, sleep
+from time import time
 from urllib import url2pathname
 import gconf
 import gettext
@@ -82,15 +81,14 @@ class saveTAGRating(rb.Plugin):
         
         # Create stock id for icons (save,restore, clean)
         iconfactory = gtk.IconFactory()
-        stock_ids = gtk.stock_list_ids()
+        #stock_ids = gtk.stock_list_ids()
         for stock_id, file in [('save_rating_playcount', 'save.png'),
                                ('restore_rating_playcount', 'restore.png'),
                                ('clean_alltags', 'clean.png')]:
             # only load image files when our stock_id is not present
-            if stock_id not in stock_ids:
-              pixbuf = gtk.gdk.pixbuf_new_from_file(self.find_file(file))
-              iconset = gtk.IconSet(pixbuf)
-              iconfactory.add(stock_id, iconset)
+            #if stock_id not in stock_ids:
+            iconset = gtk.IconSet(gtk.gdk.pixbuf_new_from_file(self.find_file(file)))
+            iconfactory.add(stock_id, iconset)
         iconfactory.add_default()
         
         
@@ -106,7 +104,7 @@ class saveTAGRating(rb.Plugin):
         
         # Store a reference to the db
         self.db = shell.props.db
-        
+
         # If autosave is enabled, each time an entry is changed call the given method
         if self.autosaveenabled:
             self.entrychanged_sig_id = self.db.connect('entry-changed', self._on_entry_change)
@@ -330,9 +328,7 @@ class saveTAGRating(rb.Plugin):
             
             # Update progress bar advancement, for the moment, only updated every 5 songs due to count...
             self.progressbar.set_fraction(self.iel / selected_size)
-            #dirpath = uri.rpartition('/')[0]
-            #uri_normalizado = url2pathname(dirpath.replace("file://", ""))
-            #path_normalizado = url2pathname(uri.replace("file://", ""))
+            # Transform the URI into a standard UNIX path
             path_normalizado = url2pathname(uri[7:])
             
             # ...Execute the doaction function
@@ -342,6 +338,7 @@ class saveTAGRating(rb.Plugin):
             
         if self.iel < selected_size:
             gtk.gdk.threads_leave()
+            # Computation is not over, still have work to do...
             return True
 
 
@@ -547,7 +544,7 @@ class saveTAGRating(rb.Plugin):
         
      
     def _save_db_to_dict_tags(self, audio, rating_identifier, playcount_identifier, encoding, rating, count):
-        """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 
+        """" Common code for _save_db_to_vcomment  and _save_db_to_mp4 and _save_db_to_"whatever use dictionnary tags"
         that use dictionnary tags to save rating and playcount. 
         Only the identifier (dictionnary key) changes, so you need to provide them.
         
@@ -648,6 +645,8 @@ class saveTAGRating(rb.Plugin):
         - Should be audio format agnostic 
         
         """
+        
+    
         try:
             # Get the dbrating value (float) of the RhythmboxDB element 
             dbrating = db.entry_get(element, rhythmdb.PROP_RATING)
@@ -663,7 +662,8 @@ class saveTAGRating(rb.Plugin):
             else:
                 # Audio format is known, call the selector...
                 self._save_db_to(path_normalizado, dbrating, dbcount, format)
-        
+            
+            
         except Exception, e:
                 self.num_failed += 1
                 print(e, path_normalizado)

@@ -75,7 +75,7 @@ class saveTAGRatingConfigureDialog:
 
 	def dialog_response(self, dialog, response):
 		""" Callback method for the dialog 
-		Two possible response : OK and CANCEL
+		Two possible responses : OK and CANCEL
 		"""
 		if response == gtk.RESPONSE_OK:
 			
