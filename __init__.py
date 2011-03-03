@@ -37,9 +37,9 @@ import gtk
 import gtk.glade
 try:
     import pynotify
-    usepynotify=True
+    usepynotify = True
 except ImportError:
-    usepynotify=False
+    usepynotify = False
         
 import rb
 import rhythmdb
@@ -58,8 +58,8 @@ _ = t.ugettext
 # playcountsenabled : if enabled, support playcount save/restore/clean/autosave
 
 gconf_keys = {'autosaveenabled' : '/apps/rhythmbox/plugins/saveTAGRating/autosave_enabled'
-              ,'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
-              ,'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
+              , 'ratingsenabled' : '/apps/rhythmbox/plugins/saveTAGRating/ratings_enabled'
+              , 'playcountsenabled':'/apps/rhythmbox/plugins/saveTAGRating/playcounts_enabled'
               }
 
 
@@ -72,7 +72,7 @@ class saveTAGRating(rb.Plugin):
     def activate(self, shell):
         """ Activation method, initialization phase """
         # Store the shell
-        self.shell=shell
+        self.shell = shell
         
         # Retrieve some gconf values
         self.autosaveenabled = gconf.client_get_default().get_bool(gconf_keys['autosaveenabled'])
@@ -104,7 +104,15 @@ class saveTAGRating(rb.Plugin):
         
         # Store a reference to the db
         self.db = shell.props.db
-
+            
+#        entry_type = MyEntryType()
+#        self.db.register_entry_type(entry_type)
+#        self.mysource = gobject.new (MySource, shell=shell, name=_("My Source"), entry_type=entry_type)
+#        group = rb.rb_display_page_group_get_by_id ("shared")
+#        shell.append_display_page (self.mysource, group)
+#        shell.register_entry_type_for_source(self.mysource, entry_type)
+        
+        
         # If autosave is enabled, each time an entry is changed call the given method
         if self.autosaveenabled:
             self.entrychanged_sig_id = self.db.connect('entry-changed', self._on_entry_change)
@@ -169,7 +177,7 @@ class saveTAGRating(rb.Plugin):
 
 
 
-    def setup_gtkactions(self,shell):
+    def setup_gtkactions(self, shell):
         """ Method to be called to create gtk.Action and menu entries 
         AND to update existing menu (meaning, it can be called several times during plugin runtime) 
         That's why we need to "clean" any existing menu ui before...
@@ -183,27 +191,27 @@ class saveTAGRating(rb.Plugin):
                 
         # If both rating support and playcount support are enabled...
         if self.ratingsenabled and self.playcountsenabled:
-            savetext=_('Save rating and playcount to file')
-            restoretext=_('Restore rating and playcount from file')
-            cleantext=_('Remove rating and playcount tags')
-            self.create_gtkAction=True
+            savetext = _('Save rating and playcount to file')
+            restoretext = _('Restore rating and playcount from file')
+            cleantext = _('Remove rating and playcount tags')
+            self.create_gtkAction = True
         
         else:
             # If only rating support is enabled...
             if self.ratingsenabled:
-                savetext=_('Save rating to file')
-                restoretext=_('Restore rating from file')
-                cleantext=_('Remove rating tag')
-                self.create_gtkAction=True
+                savetext = _('Save rating to file')
+                restoretext = _('Restore rating from file')
+                cleantext = _('Remove rating tag')
+                self.create_gtkAction = True
             # If only playcount support is enabled...
             elif self.playcountsenabled:
-                savetext=_('Save playcount to file')
-                restoretext=_('Restore playcount from file')
-                cleantext=_('Remove playcount tag')
-                self.create_gtkAction=True
+                savetext = _('Save playcount to file')
+                restoretext = _('Restore playcount from file')
+                cleantext = _('Remove playcount tag')
+                self.create_gtkAction = True
             else:
                 # Nothing is enabled, we don't need to create gtk.Action
-                self.create_gtkAction=False
+                self.create_gtkAction = False
         
         
         
@@ -443,13 +451,15 @@ class saveTAGRating(rb.Plugin):
 
     def _save_db_to_id3v2(self, pathSong, dbrating, dbcount):
         """ Save rating and playcount from Rhythmbox db to standard ID3v2 tags
-        See http://www.id3.org/id3v2.4.0-frames section 4.16 and 4.17
-        !!! Only for MP3 !!!
-        POPM stand for Popularimeter
-        PCNT stand for Play Counter 
+        
+        POPM stand for Popularimeter, we use Banshee ratings standard (which is also an ID3v2 standard,
+        meaning a value between 0 and 255). (should eventually be deprecated)
+        (see http://www.id3.org/id3v2.4.0-frames section 4.16 )
+        
+        TXXX:FMPS_Rating and TXXX:FMPS_Playcount are from the FMPS freedesktop specs
+        (see  http://www.freedesktop.org/wiki/Specifications/free-media-player-specs)
+        
         """
-        #global num_saved, num_already_done
-
         audio = ID3(pathSong)
         # Instead of having two I/O operations each time, 
         # we can get only one I/O operation when rating AND playcount haven't changed
@@ -459,44 +469,56 @@ class saveTAGRating(rb.Plugin):
         if self.ratingsenabled:
             if dbrating > 0:
                 # First we store it in POPM format
-                popmlist = audio.getall('POPM')
-                if popmlist == []:
+                
+                ########### POPM (will be deprecated eventually) #######
+                popmrating = audio.get('POPM:Banshee')
+                if popmrating == None:
                     # No existing tag POPM has been found, so create one...
                     audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
                     needsave = True
                 else:
                     # An existing tag POPM has been found, let's check if the rating has changed
-                    if self._convert_ID3v2_rating_to_rhythmbdb_rating(popmlist[0].rating) != dbrating:
+                    if self._convert_ID3v2_rating_to_rhythmbdb_rating(popmrating.rating) != dbrating:
                         # If it has, erase the value of the file an replace it with the db value (converted)
-                        audio.delall('POPM')
+                        audio.delall('POPM:Banshee')
                         audio.add(POPM(email=u'Banshee', rating=int(51 * dbrating)))
                         needsave = True
-                fmpslist = audio.getall(u'TXXX:FMPS_Rating')
-                if fmpslist == []:
+                ####################################################
+                
+                
+                ############# TXXX #################################
+                fmpsrating = audio.get(u'TXXX:FMPS_Rating')
+                if fmpsrating == None:
                     # No existing tag TXXX for FMPS has been found, so create one...
                     audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
                     needsave = True
                 else:
                     # An existing tag TXXX for FMPS has been found, let's check if the rating has changed
-                    if self._convert_fmps_rating_to_rhythmbdb_rating(fmpslist[0].text[0]) != dbrating:
-                        # If it has, erase the value of the file an replace it with the db value (converted)
+                    if self._convert_fmps_rating_to_rhythmbdb_rating(fmpsrating.text[0]) != dbrating:
+                        # If it has, erase the value of the file and replace it with the db value (converted)
                         audio.delall(u'TXXX:FMPS_Rating')
                         audio.add(TXXX(encoding=3, desc=u"FMPS_Rating", text=[unicode(0.2 * dbrating)]))
                         needsave = True            
-        
+                #######################################################
+                
+                
         if self.playcountsenabled: 
             if dbcount > 0:
-                pcntlist = audio.getall('PCNT')
-                if pcntlist == []:
-                    # No existing tag PCNT has been found, create one...
-                    audio.add(PCNT(count=int(dbcount)))
+                
+                ######### TXXX ############
+                fmpsplaycount = audio.get(u'TXXX:FMPS_Playcount')
+                if fmpsplaycount == None:
+                    # No existing tag TXXX for FMPS has been found, so create one...
+                    audio.add(TXXX(encoding=3, desc=u"FMPS_Playcount", text=[unicode(1.0 * dbcount)]))
                     needsave = True
                 else:
-                    # An existing tag PCNT has been found, let's check if the count has changed
-                    if pcntlist[0].count != dbcount:
-                        audio.delall('PCNT')
-                        audio.add(PCNT(count=int(dbcount)))
-                        needsave = True
+                    # An existing tag TXXX for FMPS has been found, let's check if the playcount has changed
+                    if float(fmpsplaycount.text[0]) != dbcount:
+                        # If it has, erase the value of the file and replace it with the db value (converted)
+                        audio.delall(u'TXXX:FMPS_Playcount')
+                        audio.add(TXXX(encoding=3, desc=u"FMPS_Playcount", text=[unicode(1.0 * dbcount)]))
+                        needsave = True 
+                ############################
 
         if needsave:
             # save to file only if needed
@@ -666,6 +688,7 @@ class saveTAGRating(rb.Plugin):
             
         except Exception, e:
                 self.num_failed += 1
+                #self.mysource.add_entry(element, -1)
                 print(e, path_normalizado)
         
 
@@ -679,26 +702,28 @@ class saveTAGRating(rb.Plugin):
         audio = ID3(pathSong)
         
         filerating = 0
-        
         if self.ratingsenabled:
-            popmlist = audio.getall('POPM')
-            if popmlist != []:
-                rating = popmlist[0].rating
+            
+            popmrating = audio.get('POPM:Banshee')
+            if popmrating is not None:
+                rating = popmrating.rating
                 filerating = self._convert_ID3v2_rating_to_rhythmbdb_rating(rating)
-            fmpslist = audio.getall(u'TXXX:FMPS_Rating')
-            if fmpslist != []:
-                rating = fmpslist[0].text[0] # is an unicode string
+                
+                
+            fmpsplaycount = audio.get(u'TXXX:FMPS_Rating')
+            if fmpsplaycount is not None:
+                rating = fmpsplaycount.text[0] 
                 filerating = self._convert_fmps_rating_to_rhythmbdb_rating(rating)
             
-        #Attention, filerating prendra ici la valeur de TXXX par défaut
-        # mais si il n'pas de TXXX, alors la valeur POPM sera choisie
+        # /!\ TXXX:FMPS_Rating takes precedence over POPM value /!\
         
+         
         filecount = 0
-        
         if self.playcountsenabled:
-            pcntlist = audio.getall('PCNT')
-            if pcntlist != []:
-                filecount = pcntlist[0].count    
+            
+            fmpsplaycount = audio.get(u'TXXX:FMPS_Playcount')
+            if fmpsplaycount is not None:
+                filecount = int(float(fmpsplaycount.text[0])) # is an unicode string 
         
         return (filerating, filecount)
         
@@ -902,3 +927,16 @@ class saveTAGRating(rb.Plugin):
         if changes[0].prop == rhythmdb.PROP_RATING or changes[0].prop == rhythmdb.PROP_PLAY_COUNT:
              self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
              print("Autosave done")
+
+
+
+
+#class MyEntryType(rhythmdb.EntryType):
+#    def __init__(self):
+#        rhythmdb.EntryType.__init__(self, name='my-entry-type')
+#
+#class MySource(rb.StaticPlaylistSource):
+#    def __init__(self):
+#        rb.StaticPlaylistSource.__init__(self)
+#        
+#gobject.type_register(MySource)
