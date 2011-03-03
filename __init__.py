@@ -865,6 +865,9 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key(u'TXXX:FMPS_Rating'):
                         audio.delall(u'TXXX:FMPS_Rating')
                         needsave = True
+                    if audio.has_key(u'TXXX:FMPS_Playcount'):
+                        audio.delall(u'TXXX:FMPS_Playcount')
+                        needsave = True
                     
                     
                 elif format == "oggvorbis":
