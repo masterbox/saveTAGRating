@@ -14,11 +14,11 @@ Usage :
 - first backup ~/.local/share/rhythmbox/rhythmdb.xml and your audio files in case something goes wrong
 
 - To save rhythmbox database ratings and playcounts to files tag do :
-right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4) > save ratings and counts to file
+right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4,spx) > save ratings and counts to file
 (it will erase any previous stored ratings and playcounts tags)
 
 - To restore rhythmbox database ratings and playcounts from files tag do :
-right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4) > restore ratings and counts from file
+right click on a selection of files (mp3,ogg,oga,flac,mpc,mp4,spx) > restore ratings and counts from file
 (it will erase rhythmbox database values unless the value from the file are 0)
 
 Git repo usage :

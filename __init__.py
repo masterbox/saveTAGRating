@@ -17,9 +17,7 @@
 #       This is based on saveTAGCover plugin written by (Copyright (C) 2010 Jeronimo Buencuerpo Farina jerolata@gmail.com)
 #       Matthieu Bosc (mbosc77@gmail.com)
 #       Vysserk3  (vysserk3@gmail.com)
-#
-# Specs for tagging file : 
-# http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
+
 
 from mutagen.flac import FLAC
 from mutagen.id3 import ID3, POPM, PCNT, TXXX
@@ -105,14 +103,6 @@ class saveTAGRating(rb.Plugin):
         # Store a reference to the db
         self.db = shell.props.db
             
-#        entry_type = MyEntryType()
-#        self.db.register_entry_type(entry_type)
-#        self.mysource = gobject.new (MySource, shell=shell, name=_("My Source"), entry_type=entry_type)
-#        group = rb.rb_display_page_group_get_by_id ("shared")
-#        shell.append_display_page (self.mysource, group)
-#        shell.register_entry_type_for_source(self.mysource, entry_type)
-        
-        
         # If autosave is enabled, each time an entry is changed call the given method
         if self.autosaveenabled:
             self.entrychanged_sig_id = self.db.connect('entry-changed', self._on_entry_change)
@@ -182,8 +172,6 @@ class saveTAGRating(rb.Plugin):
         AND to update existing menu (meaning, it can be called several times during plugin runtime) 
         That's why we need to "clean" any existing menu ui before...
         """
-        
-        
         # Clean previous ui (if any)
         if "uim" in dir(self):
                 self.uim.remove_ui(self.ui_id)
@@ -259,17 +247,14 @@ class saveTAGRating(rb.Plugin):
             self.uim.ensure_update()
 
 
-               
-      
-      
-
-
     def executedoActionOnSelected(self, action, doaction, shell):
         """ Function to apply doaction method on each element that has been selected """        
         # Get a rb.Source instance of the selected page
         try:
+            #For Rhythmbox 0.12.xxx, "selected_source"
             source = shell.get_property("selected_source")
         except TypeError:
+            #For Rhythmbox 0.13.xxx, "selected_page"
             source = shell.get_property("selected_page")
         
         # Push a message in the statusbar
@@ -574,7 +559,7 @@ class saveTAGRating(rb.Plugin):
         for mp4, identifiers are '----:com.apple.iTunes:FMPS_Rating' and  
         '----:com.apple.iTunes:FMPS_Playcount'
         etc...
-         See http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
+        See http://www.freedesktop.org/wiki/Specifications/free-media-player-specs
         
         audio : the object representing the audio file 
         rating_identifier : the key to access the rating value in the dictionnary
@@ -869,7 +854,6 @@ class saveTAGRating(rb.Plugin):
                         audio.delall(u'TXXX:FMPS_Playcount')
                         needsave = True
                     
-                    
                 elif format == "oggvorbis":
                     audio = OggVorbis(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
@@ -878,6 +862,7 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
                         needsave = True
+                        
                 elif format == "flac":
                     audio = FLAC(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
@@ -886,6 +871,7 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('FMPS_PLAYCOUNT'):
                         del audio['FMPS_PLAYCOUNT']
                         needsave = True
+                        
                 elif format == "mp4":
                     audio = MP4(path_normalizado)
                     if audio.has_key('----:com.apple.iTunes:FMPS_Rating'):
@@ -894,6 +880,7 @@ class saveTAGRating(rb.Plugin):
                     if audio.has_key('----:com.apple.iTunes:FMPS_Playcount'):
                         del audio['----:com.apple.iTunes:FMPS_Playcount']
                         needsave = True
+                        
                 elif format == "musepack":
                     audio = Musepack(path_normalizado)
                     if audio.has_key('FMPS_RATING'):
@@ -931,15 +918,3 @@ class saveTAGRating(rb.Plugin):
              self.saveRhythmDBToFile(db, entry, url2pathname(entry.get_playback_uri()[7:]))
              print("Autosave done")
 
-
-
-
-#class MyEntryType(rhythmdb.EntryType):
-#    def __init__(self):
-#        rhythmdb.EntryType.__init__(self, name='my-entry-type')
-#
-#class MySource(rb.StaticPlaylistSource):
-#    def __init__(self):
-#        rb.StaticPlaylistSource.__init__(self)
-#        
-#gobject.type_register(MySource)
